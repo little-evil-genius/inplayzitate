@@ -2924,10 +2924,10 @@ function inplayquotes_index() {
                     $name = $reaction['name'];
                     $image = $reaction['image'];
 
-                    $query_quote = $db->query("SELECT reaction,uid,timestamp FROM ".TABLE_PREFIX."inplayquotes_reactions
+                    $query_quote = $db->query("SELECT reaction,uid,username FROM ".TABLE_PREFIX."inplayquotes_reactions
                     WHERE qid = '".$qid."'  
                     AND reaction = '".$rsid."'
-                    ORDER BY timestamp
+                    ORDER BY username
                     ");
 
                     $count = $db->num_rows($query_quote);
