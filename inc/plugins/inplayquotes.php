@@ -1,4 +1,7 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL); 
 // Direktzugriff auf die Datei aus Sicherheitsgründen sperren
 if(!defined("IN_MYBB"))
 {
@@ -72,7 +75,7 @@ function inplayquotes_install(){
         `reaction` int(11) unsigned NOT NULL,
         `qid` int(11) unsigned NOT NULL,
         `uid` int(11) unsigned NOT NULL,
-        `username` VARCHAR(120) COLLATE utf8_general_ci NOT NULL,
+        `timestamp` int(21) unsigned NOT NULL,
         PRIMARY KEY(`rid`),
         KEY `rid` (`rid`)
         )
@@ -1089,47 +1092,6 @@ function inplayquotes_install(){
     while($theme = $db->fetch_array($tids)) {
         update_theme_stylesheet_list($theme['tid']);
     }
-
-    // Übertragung von den Daten von Jules Inplayzitaten
-    if ($db->table_exists("inplayquotes_jule")) {
-        // Führe den Datenübertrag aus
-        $db->query("INSERT INTO `".TABLE_PREFIX."inplayquotes` (qid, uid, username, tid, pid, date, quote) SELECT qid,uid,'',tid,pid,timestamp,quote FROM `".TABLE_PREFIX."inplayquotes_jule`");
-        
-        // Username noch rausfischen
-        $alluids_query = $db->query("SELECT uid FROM ".TABLE_PREFIX."inplayquotes GROUP BY uid");
-
-        $all_uids = [];
-        while($alluid = $db->fetch_array($alluids_query)) {
-            $user = get_user($alluid['uid']);
-            // Vorhanden -> daten aus der Users Tabelle
-            if (!empty($user)) {
-                $all_uids[$alluid['uid']] = $user['username'];
-            } else {
-                $all_uids[$alluid['uid']] = "Gast";
-            }
-        }
-
-        foreach ($all_uids as $uid => $username) {
-            $into_username = array(
-                "username" => $db->escape_string($username),
-            );
-            $db->update_query("inplayquotes", $into_username, "uid='".$uid."'");
-        }
-
-        // alte Tabelle löschen
-        $db->drop_table("inplayquotes_jule");
-    }
-
-    // Übertragung von den Daten von Jules Inplayzitaten Katjas Likes
-    if ($db->table_exists("ingamequotes_likes_jule")) {
-        // Führe den Datenübertrag aus
-        $db->query("INSERT INTO `".TABLE_PREFIX."inplayquotes_reactions` (rid, reaction, qid, uid, username) SELECT id,6,qid,uid,username FROM `".TABLE_PREFIX."ingamequotes_likes_jule`");
-
-        // alte Tabelle löschen
-        $db->drop_table("ingamequotes_likes_jule");
-    }
-
-
 }
  
 // Funktion zur Überprüfung des Installationsstatus; liefert true zurürck, wenn Plugin installiert, sonst false (optional).
@@ -1707,6 +1669,8 @@ function inplayquotes_user_delete(){
     
     // UID gelöschter Chara
     $deleteChara = (int)$user['uid'];
+    // Alle Reaktionen lösche
+    $db->delete_query('inplayquotes_reactions', "uid = ".$deleteChara."");
 
     if ($deletion_settings == 0) return;
 
@@ -2324,10 +2288,10 @@ function inplayquotes_misc() {
                         $name = $reaction['name'];
                         $image = $reaction['image'];
 
-                        $query_quote = $db->query("SELECT reaction,uid,username FROM ".TABLE_PREFIX."inplayquotes_reactions
+                        $query_quote = $db->query("SELECT reaction,uid,timestamp FROM ".TABLE_PREFIX."inplayquotes_reactions
                         WHERE qid = '".$qid."'  
                         AND reaction = '".$rsid."'
-                        ORDER BY username
+                        ORDER BY timestamp
                         ");
 
                         $count = $db->num_rows($query_quote);
@@ -2337,13 +2301,7 @@ function inplayquotes_misc() {
                         if ($reactions_option == 1) {
                             $all_usernames = "";
                             while ($alluser = $db->fetch_array($query_quote)){
-                                $user = get_user($alluser['uid']);
-                                // Vorhanden -> daten aus der Users Tabelle
-                                if (!empty($user)) {
-                                    $all_usernames .= $user['username'].", ";
-                                } else {
-                                    $all_usernames .= $alluser['username'].", ";
-                                }
+                                $all_usernames .= get_user($alluser['uid'])['username'].", ";
                             } 
                             // letztes Komma abschneiden 
                             $title = substr($all_usernames, 0, -2);
@@ -2352,18 +2310,12 @@ function inplayquotes_misc() {
                         else {
                             $all_playername = "";
                             while ($alluser = $db->fetch_array($query_quote)){
-                                $user = get_user($alluser['uid']);
-                                // Vorhanden -> daten aus der Users Tabelle
-                                if (!empty($user)) {
-                                    // wenn Zahl => klassisches Profilfeld
-                                    if (is_numeric($playername_setting)) {
-                                        $playername = $db->fetch_field($db->simple_select("userfields", "fid".$playername_setting, "ufid = '".$alluser['uid']."'"), "fid".$playername_setting);
-                                    } else {
-                                        $playerid = $db->fetch_field($db->simple_select("application_ucp_fields", "id", "fieldname = '".$playername_setting."'"), "id");
-                                        $playername = $db->fetch_field($db->simple_select("application_ucp_userfields", "value", "fieldid = '".$playerid."' AND uid = '".$alluser['uid']."'"), "value");
-                                    }
+                                // wenn Zahl => klassisches Profilfeld
+                                if (is_numeric($playername_setting)) {
+                                    $playername = $db->fetch_field($db->simple_select("userfields", "fid".$playername_setting, "ufid = '".$uid."'"), "fid".$playername_setting);
                                 } else {
-                                    $playername = $alluser['username'].$lang->inplayquotes_filter_select_character_formerly;
+                                    $playerid = $db->fetch_field($db->simple_select("application_ucp_fields", "id", "fieldname = '".$playername_setting."'"), "id");
+                                    $playername = $db->fetch_field($db->simple_select("application_ucp_userfields", "value", "fieldid = '".$playerid."' AND uid = '".$uid."'"), "value");
                                 }
                                 $all_playername .= $playername.", ";
                             } 
@@ -2583,7 +2535,7 @@ function inplayquotes_misc() {
             'reaction' => (int)$reactionId,
             'qid' => (int)$qid,
             'uid' => (int)$sendby,
-            'username' => get_user($sendby)['username']
+            'timestamp' => TIME_NOW
         );
 
         $quote_user = $db->fetch_field($db->simple_select("inplayquotes", "uid", "qid = '".$qid."'"), "uid");
@@ -2924,10 +2876,10 @@ function inplayquotes_index() {
                     $name = $reaction['name'];
                     $image = $reaction['image'];
 
-                    $query_quote = $db->query("SELECT reaction,uid,username FROM ".TABLE_PREFIX."inplayquotes_reactions
+                    $query_quote = $db->query("SELECT reaction,uid,timestamp FROM ".TABLE_PREFIX."inplayquotes_reactions
                     WHERE qid = '".$qid."'  
                     AND reaction = '".$rsid."'
-                    ORDER BY username
+                    ORDER BY timestamp
                     ");
 
                     $count = $db->num_rows($query_quote);
@@ -2937,13 +2889,7 @@ function inplayquotes_index() {
                     if ($reactions_option == 1) {
                         $all_usernames = "";
                         while ($alluser = $db->fetch_array($query_quote)){
-                            $user = get_user($alluser['uid']);
-                            // Vorhanden -> daten aus der Users Tabelle
-                            if (!empty($user)) {
-                                $all_usernames .= $user['username'].", ";
-                            } else {
-                                $all_usernames .= $alluser['username'].", ";
-                            }
+                            $all_usernames .= get_user($alluser['uid'])['username'].", ";
                         } 
                         // letztes Komma abschneiden 
                         $title = substr($all_usernames, 0, -2);
@@ -2952,18 +2898,12 @@ function inplayquotes_index() {
                     else {
                         $all_playername = "";
                         while ($alluser = $db->fetch_array($query_quote)){
-                            $user = get_user($alluser['uid']);
-                            // Vorhanden -> daten aus der Users Tabelle
-                            if (!empty($user)) {
-                                // wenn Zahl => klassisches Profilfeld
-                                if (is_numeric($playername_setting)) {
-                                    $playername = $db->fetch_field($db->simple_select("userfields", "fid".$playername_setting, "ufid = '".$alluser['uid']."'"), "fid".$playername_setting);
-                                } else {
-                                    $playerid = $db->fetch_field($db->simple_select("application_ucp_fields", "id", "fieldname = '".$playername_setting."'"), "id");
-                                    $playername = $db->fetch_field($db->simple_select("application_ucp_userfields", "value", "fieldid = '".$playerid."' AND uid = '".$alluser['uid']."'"), "value");
-                                }
+                            // wenn Zahl => klassisches Profilfeld
+                            if (is_numeric($playername_setting)) {
+                                $playername = $db->fetch_field($db->simple_select("userfields", "fid".$playername_setting, "ufid = '".$uid."'"), "fid".$playername_setting);
                             } else {
-                                $playername = $alluser['username'].$lang->inplayquotes_filter_select_character_formerly;
+                                $playerid = $db->fetch_field($db->simple_select("application_ucp_fields", "id", "fieldname = '".$playername_setting."'"), "id");
+                                $playername = $db->fetch_field($db->simple_select("application_ucp_userfields", "value", "fieldid = '".$playerid."' AND uid = '".$uid."'"), "value");
                             }
                             $all_playername .= $playername.", ";
                         } 
