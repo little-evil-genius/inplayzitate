@@ -3142,9 +3142,7 @@ function inplayquotes_alerts() {
 	     */
 	    public function init()
 	    {
-	        if (!$this->lang->inplayquotes) {
-	            $this->lang->load('inplayquotes');
-	        }
+	        $this->lang->load('inplayquotes');
 	    }
 
 	    /**
@@ -3210,9 +3208,7 @@ function inplayquotes_alerts() {
 	     */
 	    public function init()
 	    {
-	        if (!$this->lang->inplayquotes) {
-	            $this->lang->load('inplayquotes');
-	        }
+	        $this->lang->load('inplayquotes');
 	    }
 
 	    /**
