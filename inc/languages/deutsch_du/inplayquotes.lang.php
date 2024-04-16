@@ -51,6 +51,6 @@ $l['inplayquotes_add_inplayquote_error_allowgroups'] = "Du hast keine Berechtigu
 $l['inplayquotes_online_location'] = "Schaut sich gerade die <a href=\"misc.php?action=inplayquotes\">Übersicht der Inplayzitate</a> an.";
 
 $l['inplayquotes_alert_add_quote'] = '{1} hat dich aus der Szene <b>"{3}"</b> zitiert.';
-$l['myalerts_setting_inplayquotes_alert_add_quote'] = "Benachrichtigung erhalten wenn du aus dem Inplay zitiert wurdest?";
+$l['myalerts_setting_inplayquotes_add_quote'] = "Benachrichtigung erhalten wenn du aus dem Inplay zitiert wurdest?";
 $l['inplayquotes_alert_add_reaction'] = '{1} hat mit <img src="{3}" style="width:15px;" /> auf dein Inplayzitat reagiert';
-$l['myalerts_setting_inplayquotes_alert_add_reaction'] = "Benachrichtigung erhalten wenn jemand auf dein Inplayzitat reagiert hat?";
+$l['myalerts_setting_inplayquotes_add_reaction'] = "Benachrichtigung erhalten wenn jemand auf dein Inplayzitat reagiert hat?";
