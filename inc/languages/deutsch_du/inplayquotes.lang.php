@@ -11,7 +11,7 @@ $l['inplayquotes_pm_add_reaction_subject'] = "Auf dein Inplayzitat wurde reagier
 $l['inplayquotes_pm_add_reaction_message'] = "Hallo {1},<br>ich habe auf folgendes Zitat mit <img src=\"{2}\" style=\"16px\"> reagiert:<br><br>{3}";
 
 $l['inplayquotes_lists'] = "Listen";
-$l['inplayquotes_overview'] = "Alle Inplayzitat";
+$l['inplayquotes_overview'] = "Alle Inplayzitate";
 $l['inplayquotes_overview_error_guest'] = "Du hast keine Berechtigungen die Inplayzitat einzusehen.";
 $l['inplayquotes_filter'] = "Filtern nach";
 $l['inplayquotes_filter_button'] = "Zitate durchsuchen";
@@ -19,7 +19,7 @@ $l['inplayquotes_filter_button'] = "Zitate durchsuchen";
 $l['inplayquotes_filter_headline_player'] = "nach Spieler:in";
 $l['inplayquotes_filter_select_player'] = "Spieler:in auswählen";
 $l['inplayquotes_filter_headline_character'] = "nach Charakter";
-$l['inplayquotes_filter_select_character'] = "Charackter auswählen";
+$l['inplayquotes_filter_select_character'] = "Charakter auswählen";
 $l['inplayquotes_filter_select_character_formerly'] = " (ehem.)";
 $l['inplayquotes_filter_headline_timestamp'] = "nach Postdatum";
 $l['inplayquotes_filter_select_timestamp'] = "Zeitraum auswählen";
