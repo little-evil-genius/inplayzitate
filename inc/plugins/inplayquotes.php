@@ -276,6 +276,13 @@ function inplayquotes_install(){
             'value' => '0', // Default
             'disporder' => 23
 		),
+		'inplayquotes_indexarea' => array(
+			'title' => 'Anzeige auf dem Index',
+            'description' => 'Soll ein zufälliges Inplayzitat über einer bestimmten Forum dargestellt werden? Die Index-Variable kann dennoch benutzt werden.',
+            'optionscode' => 'forumselectsingle',
+            'value' => '', // Default
+            'disporder' => 24
+		),
 	);
 			
 	foreach($setting_array as $name => $setting)
@@ -3669,4 +3676,417 @@ function inplayquotes_getNextId($tablename){
     $lastId = $db->fetch_field($db->write_query("SELECT AUTO_INCREMENT FROM information_schema.TABLES 
     WHERE TABLE_SCHEMA = '" . $databasename . "' AND TABLE_NAME = '" . TABLE_PREFIX . $tablename . "'"), "AUTO_INCREMENT");
     return $lastId;
+}
+
+$plugins->add_hook("build_forumbits_forum", "inplayquotes_forumbits");
+function inplayquotes_forumbits(&$forum) {
+
+    global $db, $cache, $mybb, $lang, $templates, $theme, $parser, $code_html;
+
+    if ($forum['fid'] != $mybb->settings['inplayquotes_indexarea']) {
+        $forum['inplayquotes_index'] = "";
+        return;    
+    }
+
+    // EINSTELLUNGEN
+	$graphic_type = $mybb->settings['inplayquotes_overview_graphic'];
+	$graphic_uploadsystem = $mybb->settings['inplayquotes_overview_graphic_uploadsystem'];
+	$graphic_profilefield = $mybb->settings['inplayquotes_overview_graphic_profilefield'];
+	$graphic_characterfield = $mybb->settings['inplayquotes_overview_graphic_characterfield'];
+	$graphic_defaultgraphic = $mybb->settings['inplayquotes_overview_graphic_defaultgraphic'];
+	$graphic_guest = $mybb->settings['inplayquotes_overview_graphic_guest'];
+    $reactions_setting = $mybb->settings['inplayquotes_reactions'];
+    $reactions_option = $mybb->settings['inplayquotes_reactions_option'];
+    $playername_setting = $mybb->settings['inplayquotes_playername'];
+
+    $all_reactions_options = $db->num_rows($db->query("SELECT rsid FROM ".TABLE_PREFIX."inplayquotes_reactions_settings"));
+
+    // DAS HTML UND CO ANGEZEIGT WIRD
+    require_once MYBB_ROOT."inc/class_parser.php";
+    $parser = new postParser;
+    $code_html = array(
+        "allow_html" => 1,
+        "allow_mycode" => 1,
+        "allow_smilies" => 1,
+        "allow_imgcode" => 1,
+        "filter_badwords" => 0,
+        "nl2br" => 1,
+        "allow_videocode" => 0
+    );
+    
+    // SPRACHDATEI
+	$lang->load('inplayquotes');
+    
+    // USER-ID
+    $active_uid = $mybb->user['uid'];
+    // Accountswitcher
+    $active_allcharas = inplayquotes_get_allchars($active_uid);
+    $active_charastring = implode(",", array_keys($active_allcharas));
+    $count_allcharas = count($active_allcharas);
+
+    $index_quote = $db->query("SELECT * FROM ".TABLE_PREFIX."inplayquotes	
+	ORDER BY rand()
+	LIMIT 1
+    ");
+
+    eval("\$inplayquote_bit = \"".$templates->get("inplayquotes_index_bit_none")."\";");
+    while($quote = $db->fetch_array($index_quote)) {
+
+        // Leer laufen lassen
+        $qid = "";
+        $uid = "";
+        $charactername = "";
+        $charactername_formated = "";
+        $charactername_link = "";
+        $charactername_fullname = "";
+        $charactername_first = "";
+        $charactername_last = "";
+        $tid = "";
+        $pid = "";
+        $date = "";
+        $inplayquote = "";
+        $graphic_link = "";
+        $scene_link = "";
+        $postdate = "";
+
+        // Mit Infos füllen
+        $qid = $quote['qid'];
+        $uid = $quote['uid'];
+        $tid = $quote['tid'];
+        $pid = $quote['pid'];
+        $date = $quote['date'];
+        $inplayquote = $parser->parse_message($quote['quote'], $code_html);
+
+        // User vorhanden oder nicht
+        $user = get_user($uid);
+        // Vorhanden -> daten aus der Users Tabelle
+        if (!empty($user)) {
+            // CHARACTER NAME
+            // ohne alles
+            $charactername = $user['username'];
+            // mit Gruppenfarbe
+            $charactername_formated = build_profile_link(format_name($charactername, $user['usergroup'], $user['displaygroup']), $uid);	
+            // Nur Link
+            $charactername_link = build_profile_link($charactername, $uid);
+            // Name gesplittet
+            $charactername_fullname = explode(" ", $charactername);
+            $charactername_first = array_shift($charactername_fullname);
+            $charactername_last = implode(" ", $charactername_fullname);
+            
+            // CHARACTER GRAFIK
+            // Gäste
+            if ($active_uid == 0 AND $graphic_guest == 1) {
+                $graphic_link = $theme['imgdir']."/".$graphic_defaultgraphic;
+            } else {
+                // Avatar
+                if ($graphic_type == 0) {
+                    $chara_graphic = $user['avatar'];
+                } 
+                // Uploadsystem
+                else if ($graphic_type == 1) {
+                    $path = $db->fetch_field($db->simple_select("uploadsystem", "path", "identification = '".$graphic_uploadsystem."'"), "path");                  
+                    $value = $db->fetch_field($db->simple_select("uploadfiles", $graphic_uploadsystem, "ufid = '".$uid."'"), $graphic_uploadsystem);
+
+                    if ($value != "") {
+                        $chara_graphic = $path."/".$value;
+                    } else {
+                        $chara_graphic = "";
+                    }
+                }
+                // Profilfelder
+                else if ($graphic_type == 2) {
+                    $fid = "fid".$graphic_profilefield;
+                    $chara_graphic = $db->fetch_field($db->simple_select("userfields", $fid, "ufid = '".$uid."'"), $fid);
+                }
+                // Steckifelder
+                else if ($graphic_type == 3) {	
+                    $fieldid = $db->fetch_field($db->simple_select("application_ucp_fields", "id", "fieldname = '".$graphic_characterfield."'"), "id");                  
+                    $chara_graphic = $db->fetch_field($db->simple_select("application_ucp_userfields", "value", "uid = '".$uid."' AND fieldid = '".$fieldid."'"), "value");
+                }
+
+                // wenn man kein Grafik hat => Default
+                if ($chara_graphic == "") {
+                    // Dateinamen bauen
+                    $graphic_link = $theme['imgdir']."/".$graphic_defaultgraphic;
+                } else {
+                    // Dateinamen bauen
+                    $graphic_link = $chara_graphic;
+                }
+            }
+
+        } 
+        // Nicht vorhanden -> "Gast" = gespeicherter Name
+        else {
+            // CHARACTER NAME
+            // ohne alles
+            $charactername = $charactername_formated = $charactername_link = $quote['username'];
+            // Name gesplittet
+            $charactername_fullname = explode(" ", $charactername);
+            $charactername_first = array_shift($charactername_fullname);
+            $charactername_last = implode(" ", $charactername_fullname); 
+
+            // CHARACTER GRAFIK -> immer Default
+            $graphic_link = $theme['imgdir']."/".$graphic_defaultgraphic;
+        }
+
+        // Szenenlink
+        $thread = get_thread($tid);
+        $scene_link = "<a href=\"showthread.php?tid=".$tid."&amp;pid=".$pid."#pid".$pid."\">".$thread['subject']."</a>";
+
+        // Postdatum
+        $postdate = my_date('relative', $date);
+
+        // Profilfelder
+        $characterfield = inplayquotes_build_characterfield($uid);
+        // Szeneninfos
+        $scenefield = inplayquotes_build_scenefield($tid);
+
+        // Reaktionen
+        $pos = strpos(",".$active_charastring.",", ",".$uid.",");
+        if ($reactions_setting == 1) {
+
+            // Leer laufen lassen
+            $quote_preview = "";
+            $prev_quote = "";
+
+            // Mit Infos füllen
+            if(my_strlen($inplayquote) > 200) {
+                $prev_quote = my_substr($inplayquote, 0, 200)."...";
+            } else {
+                $prev_quote = $inplayquote;
+            }
+            $quote_preview = $lang->sprintf($lang->inplayquotes_reactions_quote_preview, $charactername, $prev_quote);
+
+            // Pro Charakter
+            if ($reactions_option == 1) {
+                // Bishierige Reaktionen auf das Zitat
+                $query_reactionsUser = $db->query("SELECT reaction FROM ".TABLE_PREFIX."inplayquotes_reactions
+                WHERE qid = '".$qid."'
+                AND uid = '".$active_uid."'                       
+                ");    
+            } 
+            // pro Spieler
+            else {
+                // Bishierige Reaktionen auf das Zitat
+                $query_reactionsUser = $db->query("SELECT reaction FROM ".TABLE_PREFIX."inplayquotes_reactions
+                WHERE qid = '".$qid."'
+                AND uid IN (".$active_charastring.")                          
+                ");   
+            } 
+
+            $reactionsUser_qids = "";
+            while ($reactionsUser = $db->fetch_array($query_reactionsUser)){
+                $reactionsUser_qids .= $reactionsUser['reaction'].",";
+            } 
+            if(!empty($reactionsUser_qids)) {
+                // letztes Komma abschneiden 
+                $reactionsUser_string = substr($reactionsUser_qids, 0, -1);
+                $reaction_sql = "WHERE rsid NOT IN(".$reactionsUser_string.")";
+
+                // Pro Charakter
+                if ($reactions_option == 1) {
+                    $allreacted_query = $db->query("SELECT r.reaction, rs.image, MAX(rid) AS max_rid FROM ".TABLE_PREFIX."inplayquotes_reactions r
+                    LEFT JOIN ".TABLE_PREFIX."inplayquotes_reactions_settings rs ON rs.rsid = r.reaction
+                    WHERE uid = '".$active_uid."' 
+                    AND qid = '".$qid."' 
+                    GROUP BY r.reaction
+                    ");
+                }
+                // pro Spieler
+                else {
+                    $allreacted_query = $db->query("SELECT r.reaction, rs.image  FROM ".TABLE_PREFIX."inplayquotes_reactions r
+                    LEFT JOIN ".TABLE_PREFIX."inplayquotes_reactions_settings rs ON rs.rsid = r.reaction
+                    WHERE uid IN (".$active_charastring.") 
+                    AND qid = '".$qid."' 
+                    GROUP BY r.reaction
+                    ");
+                }
+
+                $reacted_images = "";
+                $reacted_reactions = "";
+                while($allreacted = $db->fetch_array($allreacted_query)) {
+        
+                    // Leer laufen lassen
+                    $reaction = "";          
+                    $image = "";
+
+                    // Mit Infos füllen
+                    $reaction = $allreacted['reaction'];         
+                    $image = $allreacted['image'];
+
+                    eval("\$reacted_images .= \"".$templates->get("inplayquotes_reactions_reacted_image")."\";");
+                }
+
+                eval("\$reacted_reactions = \"".$templates->get("inplayquotes_reactions_reacted")."\";");
+            } else {
+                $reaction_sql = "";
+                $reacted_reactions = "";
+            }
+
+            // Bilder
+            $allreactions_query = $db->query("SELECT * FROM ".TABLE_PREFIX."inplayquotes_reactions_settings
+            ".$reaction_sql);
+
+            $reactions_images = "";
+            while($allreaction = $db->fetch_array($allreactions_query)) {
+                // Leer laufen lassen
+                $rsid = "";
+                $name = "";
+                $image = "";
+
+                // Mit Infos füllen
+                $rsid = $allreaction['rsid'];
+                $name = $allreaction['name'];
+                $image = $allreaction['image'];
+
+                eval("\$reactions_images .= \"".$templates->get("inplayquotes_reactions_add_popup_image")."\";");
+            }
+
+            eval("\$reactions_popup = \"".$templates->get("inplayquotes_reactions_add_popup")."\";");
+
+            $check = $db->num_rows($db->query("SELECT * FROM ".TABLE_PREFIX."inplayquotes_reactions
+            WHERE qid = '".$qid."'"));
+            // Hat schon Reaktionen
+            if ($check > 0) {
+
+                $reactions_query = $db->query("SELECT rs.*, GROUP_CONCAT(r.rid) AS rid_list FROM ".TABLE_PREFIX."inplayquotes_reactions r 
+                LEFT JOIN ".TABLE_PREFIX."inplayquotes_reactions_settings rs ON rs.rsid = r.reaction 
+                WHERE qid = '".$qid."' 
+                GROUP BY rs.rsid");
+                $stored_reactions = "";
+                while($reaction = $db->fetch_array($reactions_query)) {
+                    // Leer laufen lassen
+                    $rsid = "";
+                    $name = "";
+                    $image = "";
+                    $rid = "";
+                    $count = "";
+                    $title = "";
+
+                    // Mit Infos füllen
+                    $rsid = $reaction['rsid'];
+                    $name = $reaction['name'];
+                    $image = $reaction['image'];
+
+                    $query_quote = $db->query("SELECT reaction,uid,username FROM ".TABLE_PREFIX."inplayquotes_reactions
+                    WHERE qid = '".$qid."'  
+                    AND reaction = '".$rsid."'
+                    ORDER BY username
+                    ");
+
+                    $count = $db->num_rows($query_quote);
+
+                    // Namen von den Leuten
+                    // Charakternamen
+                    if ($reactions_option == 1) {
+                        $all_usernames = "";
+                        while ($alluser = $db->fetch_array($query_quote)){
+                            $user = get_user($alluser['uid']);
+                            // Vorhanden -> daten aus der Users Tabelle
+                            if (!empty($user)) {
+                                $all_usernames .= $user['username'].", ";
+                            } else {
+                                $all_usernames .= $alluser['username'].", ";
+                            }
+                        } 
+                        // letztes Komma abschneiden 
+                        $title = substr($all_usernames, 0, -2);
+                    }
+                    // Spielername
+                    else {
+                        $all_playername = "";
+                        while ($alluser = $db->fetch_array($query_quote)){
+                            $user = get_user($alluser['uid']);
+                            // Vorhanden -> daten aus der Users Tabelle
+                            if (!empty($user)) {
+                                // wenn Zahl => klassisches Profilfeld
+                                if (is_numeric($playername_setting)) {
+                                    $playername = $db->fetch_field($db->simple_select("userfields", "fid".$playername_setting, "ufid = '".$alluser['uid']."'"), "fid".$playername_setting);
+                                } else {
+                                    $playerid = $db->fetch_field($db->simple_select("application_ucp_fields", "id", "fieldname = '".$playername_setting."'"), "id");
+                                    $playername = $db->fetch_field($db->simple_select("application_ucp_userfields", "value", "fieldid = '".$playerid."' AND uid = '".$alluser['uid']."'"), "value");
+                                }
+                            } else {
+                                $playername = $alluser['username'].$lang->inplayquotes_filter_select_character_formerly;
+                            }
+                            $all_playername .= $playername.", ";
+                        } 
+                        // letztes Komma abschneiden 
+                        $title = substr($all_playername, 0, -2);
+                    }
+
+                    eval("\$stored_reactions .= \"".$templates->get("inplayquotes_reactions_stored")."\";");
+                }
+
+                // Pro Charakter
+                if ($reactions_option == 1) {
+                    $account_reactions = $db->num_rows($db->query("SELECT reaction FROM ".TABLE_PREFIX."inplayquotes_reactions
+                    WHERE qid = '".$qid."'  
+                    AND uid = '".$active_uid."'                
+                    "));
+
+                    if ($all_reactions_options != $account_reactions) {
+                        $check_add = 1;
+                    } else {
+                        $check_add = 0;
+                    }   
+                } 
+                // pro Spieler
+                else {
+                    $player_reactions = $db->num_rows($db->query("SELECT reaction FROM ".TABLE_PREFIX."inplayquotes_reactions
+                    WHERE qid = '".$qid."'  
+                    AND uid IN (".$active_charastring.")                
+                    "));
+
+                    $account_reactions = $db->num_rows($db->query("SELECT reaction FROM ".TABLE_PREFIX."inplayquotes_reactions
+                    WHERE qid = '".$qid."'  
+                    AND uid = '".$active_uid."'                
+                    "));
+
+                    $all_reactions_math = $all_reactions_options*$count_allcharas;
+
+                    if ($all_reactions_math != $player_reactions AND $all_reactions_options != $account_reactions) {
+                        $check_add = 1;
+                    } else {
+                        $check_add = 0;
+                    }    
+                } 
+
+                if ($pos === false AND $check_add == 1 AND $active_uid != 0) {
+                    eval("\$reactions_add = \"".$templates->get("inplayquotes_reactions_add")."\";");
+                } else {
+                    $reactions_add = "";
+                }
+
+                if ($mybb->usergroup['canmodcp'] == '1') {
+                    $delete_reactions = "<span class=\"inplayquotes_overview_bit_reactions_delete\"><a href=\"misc.php?action=inplayquotes&amp;allreactions_delete=".$qid."\">".$lang->inplayquotes_allreactions_delete."</a></span>";
+                } else {
+                    $delete_reactions = "";
+                }
+
+                eval("\$reactions = \"".$templates->get("inplayquotes_reactions")."\";");
+            } else {
+                $reacted_reactions = "";
+
+                if ($pos === false AND $active_uid != 0) {
+                    eval("\$reactions = \"".$templates->get("inplayquotes_reactions_add")."\";");
+                } else {
+                    $reactions = "";
+                }
+            }
+        } else {
+            $reactions = "";
+        }
+
+        // Lösch Link
+        if(($mybb->usergroup['canmodcp'] == '1' OR $pos !== false) AND $active_uid != 0){
+            $del_quote = "<a href=\"misc.php?action=inplayquotes&quote_delete=".$qid."\">".$lang->inplayquotes_quote_delete."</a>";
+        } else {
+            $del_quote = "";
+        }
+
+        eval("\$inplayquote_bit = \"".$templates->get("inplayquotes_index_bit")."\";");
+    }
+
+    eval("\$forum['inplayquotes_index'] = \"".$templates->get("inplayquotes_index")."\";");
 }
