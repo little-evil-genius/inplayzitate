@@ -26,6 +26,7 @@ $plugins->add_hook("build_friendly_wol_location_end", "inplayquotes_online_locat
 if(class_exists('MybbStuff_MyAlerts_AlertTypeManager')) {
     $plugins->add_hook("global_start", "inplayquotes_alerts");
 }
+$plugins->add_hook("build_forumbits_forum", "inplayquotes_forumbits");
  
 // Die Informationen, die im Pluginmanager angezeigt werden
 function inplayquotes_info(){
@@ -1229,6 +1230,8 @@ function inplayquotes_deactivate(){
 	find_replace_templatesets("postbit", "#".preg_quote('{$post[\'button_inplayquotes\']}')."#i", '', 0);
 	find_replace_templatesets("index", "#".preg_quote('{$inplayquotes_index}')."#i", '', 0);
 	find_replace_templatesets("member_profile", "#".preg_quote('{$inplayquotes_memberprofile}')."#i", '', 0);
+	find_replace_templatesets("forumbit_depth1_cat", "#".preg_quote('{$forum[\'inplayquotes_index\']}')."#i", '', 0);
+	find_replace_templatesets("forumbit_depth2_cat", "#".preg_quote('{$forum[\'inplayquotes_index\']}')."#i", '', 0);
 
     // MyALERT STUFF
     if (class_exists('MybbStuff_MyAlerts_AlertTypeManager')) {
@@ -2093,6 +2096,7 @@ function inplayquotes_misc() {
             $uid = "";
             $charactername = "";
             $charactername_formated = "";
+            $charactername_formated_link = "";
             $charactername_link = "";
             $charactername_fullname = "";
             $charactername_first = "";
@@ -2121,7 +2125,8 @@ function inplayquotes_misc() {
                 // ohne alles
                 $charactername = $user['username'];
                 // mit Gruppenfarbe
-                $charactername_formated = build_profile_link(format_name($charactername, $user['usergroup'], $user['displaygroup']), $uid);	
+                $charactername_formated = format_name($charactername, $user['usergroup'], $user['displaygroup']);	
+                $charactername_formated_link = build_profile_link(format_name($charactername, $user['usergroup'], $user['displaygroup']), $uid);	
                 // Nur Link
                 $charactername_link = build_profile_link($charactername, $uid);
                 // Name gesplittet
@@ -2175,7 +2180,7 @@ function inplayquotes_misc() {
             else {
                 // CHARACTER NAME
                 // ohne alles
-                $charactername = $charactername_formated = $charactername_link = $quote['username'];
+                $charactername = $charactername_formated = $charactername_formated_link = $charactername_link = $quote['username'];
                 // Name gesplittet
                 $charactername_fullname = explode(" ", $charactername);
                 $charactername_first = array_shift($charactername_fullname);
@@ -2693,6 +2698,7 @@ function inplayquotes_index() {
         $uid = "";
         $charactername = "";
         $charactername_formated = "";
+        $charactername_formated_link = "";
         $charactername_link = "";
         $charactername_fullname = "";
         $charactername_first = "";
@@ -2721,7 +2727,8 @@ function inplayquotes_index() {
             // ohne alles
             $charactername = $user['username'];
             // mit Gruppenfarbe
-            $charactername_formated = build_profile_link(format_name($charactername, $user['usergroup'], $user['displaygroup']), $uid);	
+            $charactername_formated = format_name($charactername, $user['usergroup'], $user['displaygroup']);	
+            $charactername_formated_link = build_profile_link(format_name($charactername, $user['usergroup'], $user['displaygroup']), $uid);	
             // Nur Link
             $charactername_link = build_profile_link($charactername, $uid);
             // Name gesplittet
@@ -2775,7 +2782,7 @@ function inplayquotes_index() {
         else {
             // CHARACTER NAME
             // ohne alles
-            $charactername = $charactername_formated = $charactername_link = $quote['username'];
+            $charactername = $charactername_formated = $charactername_formated_link = $charactername_link = $quote['username'];
             // Name gesplittet
             $charactername_fullname = explode(" ", $charactername);
             $charactername_first = array_shift($charactername_fullname);
@@ -3671,7 +3678,6 @@ function inplayquotes_getNextId($tablename){
     return $lastId;
 }
 
-$plugins->add_hook("build_forumbits_forum", "inplayquotes_forumbits");
 function inplayquotes_forumbits(&$forum) {
 
     global $db, $cache, $mybb, $lang, $templates, $theme, $parser, $code_html;
@@ -3730,6 +3736,7 @@ function inplayquotes_forumbits(&$forum) {
         $uid = "";
         $charactername = "";
         $charactername_formated = "";
+        $charactername_formated_link = "";
         $charactername_link = "";
         $charactername_fullname = "";
         $charactername_first = "";
@@ -3758,7 +3765,8 @@ function inplayquotes_forumbits(&$forum) {
             // ohne alles
             $charactername = $user['username'];
             // mit Gruppenfarbe
-            $charactername_formated = build_profile_link(format_name($charactername, $user['usergroup'], $user['displaygroup']), $uid);	
+            $charactername_formated = format_name($charactername, $user['usergroup'], $user['displaygroup']);	
+            $charactername_formated_link = build_profile_link(format_name($charactername, $user['usergroup'], $user['displaygroup']), $uid);	
             // Nur Link
             $charactername_link = build_profile_link($charactername, $uid);
             // Name gesplittet
@@ -3812,7 +3820,7 @@ function inplayquotes_forumbits(&$forum) {
         else {
             // CHARACTER NAME
             // ohne alles
-            $charactername = $charactername_formated = $charactername_link = $quote['username'];
+            $charactername = $charactername_formated = $charactername_formated_link = $charactername_link = $quote['username'];
             // Name gesplittet
             $charactername_fullname = explode(" ", $charactername);
             $charactername_first = array_shift($charactername_fullname);
