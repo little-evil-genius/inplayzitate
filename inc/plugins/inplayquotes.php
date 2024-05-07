@@ -32,7 +32,7 @@ $plugins->add_hook("build_forumbits_forum", "inplayquotes_forumbits");
 function inplayquotes_info(){
 	return array(
 		"name"		=> "Inplayzitate",
-		"description"	=> "User können denwürdige Inplaymomente als Zitat speichern",
+		"description"	=> "User können denkwürdige Inplaymomente als Zitat speichern",
 		"website"	=> "https://github.com/little-evil-genius/inplayzitate",
 		"author"	=> "little.evil.genius",
 		"authorsite"	=> "https://storming-gates.de/member.php?action=profile&uid=1712",
@@ -128,7 +128,7 @@ function inplayquotes_install(){
         ),
 		'inplayquotes_quotesarea' => array(
 			'title' => 'Zitate Bereich',
-            'description' => 'Aus welchen Bereich vom Forum können User Zitate einreichen? Es reicht aus, die übergeordneten Kategorien zu markieren.',
+            'description' => 'Aus welchem Bereich vom Forum können User Zitate einreichen? Es reicht aus, die übergeordneten Kategorien zu markieren.',
             'optionscode' => 'forumselect',
             'value' => 'none', // Default
             'disporder' => 2
@@ -141,7 +141,7 @@ function inplayquotes_install(){
             'disporder' => 3
 		),
 		'inplayquotes_user_alert' => array(
-			'title' => 'Benachrichtigungsystem',
+			'title' => 'Benachrichtigungssystem',
 			'description' => 'Wie sollen User darüber in Kenntnis gesetzt werden, dass sie aus dem Inplay zitiert wurden?',
 			'optionscode' => 'select\n0=MyAlerts\n1=Private Nachricht',
 			'value' => 0, // Default
@@ -163,7 +163,7 @@ function inplayquotes_install(){
 		),
 		'inplayquotes_overview_filter' => array(
 			'title' => 'Filteroptionen',
-            'description' => 'Nach welchen Optionen können die Zitate gefiltert werden auf der Übersichtsseite?',
+            'description' => 'Nach welchen Optionen können die Zitate auf der Übersichtsseite gefiltert werden?',
             'optionscode' => 'checkbox\nplayer=nach Spieler\ncharacter=nach Charakter\ntimestamp=nach Postdatum',
             'value' => '', // Default
             'disporder' => 7
@@ -177,56 +177,56 @@ function inplayquotes_install(){
 		),
 		'inplayquotes_overview_graphic_uploadsystem' => array(
 			'title' => 'Identifikator von dem Upload-Element',
-            'description' => 'Wie lautet der Identifikator von dem Upload-Element, welches genutzt werden soll als Grafik vom zitierten Charakter?',
+            'description' => 'Wie lautet der Identifikator von dem Upload-Element, welches vom zitierten Charakter als Grafik genutzt werden soll',
             'optionscode' => 'text',
             'value' => 'index', // Default
             'disporder' => 9
 		),
 		'inplayquotes_overview_graphic_profilefield' => array(
 			'title' => 'FID von dem Profilfeld',
-            'description' => 'Wie lautet die FID von dem Profilfeld, welches genutzt werden soll als Grafikvom zitierten Charakter?',
+            'description' => 'Wie lautet die FID von dem Profilfeld, welches vom zitierten Charakter als Grafik genutzt werden soll?',
             'optionscode' => 'numeric',
             'value' => '6', // Default
             'disporder' => 10
 		),
 		'inplayquotes_overview_graphic_characterfield' => array(
 			'title' => 'Identifikator von dem Steckbrieffeld',
-            'description' => 'Wie lautet der Identifikator von dem Steckbrieffeld, welches genutzt werden soll als Grafik vom zitierten Charakter?',
+            'description' => 'Wie lautet der Identifikator von dem Steckbrieffeld, welches vom zitierten Charakter als Grafik genutzt werden soll?',
             'optionscode' => 'text',
             'value' => 'index_pic', // Default
             'disporder' => 11
 		),
 		'inplayquotes_overview_graphic_defaultgraphic' => array(
 			'title' => 'Standard-Grafik',
-            'description' => 'Wie heißt die Bilddatei für die Standard-Grafik? Diese Grafik wird, falls ein Charakter noch keine entsprechende Grafik besitzt oder es sich um ein gelöschten Charakter handelt, stattdessen angezeigt. Damit die Grafik für jedes Design angepasst wird, sollte der Dateiname in allen Ordner für die Designs gleich heißen.',
+            'description' => 'Wie heißt die Bilddatei für die Standard-Grafik? Diese Grafik wird, falls ein Charakter noch keine entsprechende Grafik besitzt, oder es sich um einen gelöschten Charakter handelt, stattdessen angezeigt. Damit die Grafik für jedes Design angepasst wird, sollte der Dateiname in allen Ordner für die Designs gleich heißen.',
             'optionscode' => 'text',
             'value' => 'default_avatar.png', // Default
             'disporder' => 12
 		),
         'inplayquotes_overview_graphic_guest' => array(
             'title' => 'Gäste-Ansicht',
-            'description' => 'Sollen die Grafiken von den zitierten Charakter vor Gästen versteckt werden? Statt der Grafik wird die festgelegte Standard-Grafik angezeigt.',
+            'description' => 'Sollen die Grafiken von den zitierten Charakteren vor Gästen versteckt werden? Statt der Grafik wird die festgelegte Standard-Grafik angezeigt.',
             'optionscode' => 'yesno',
             'value' => '1', // Default
             'disporder' => 13
         ),
         'inplayquotes_profilfeldsystem' => array(
             'title' => 'Profilfeldsystem',
-            'description' => 'Um zusätzliche Informationen über den zitierten Charakter/Spieler auszugeben, muss angegeben werden, mit welchem Profilfeldsystem gearbeitet wird. Es kann auch ausgewählt werden, dass beides verwendet wird.',
+            'description' => 'Um zusätzliche Informationen über dem zitierten Charakter/Spieler auszugeben, muss angegeben werden, mit welchem Profilfeldsystem gearbeitet wird. Es kann auch ausgewählt werden, dass beide Varianten verwendet werden.',
             'optionscode' => 'select\n0=klassische Profilfelder\n1=Steckbrief-Plugin\n2=beide Varianten',
             'value' => '0', // Default
             'disporder' => 14
         ),
 		'inplayquotes_reactions' => array(
 			'title' => 'Overview: Reaktionen auf Zitate',
-            'description' => 'Dürfen User auf die eingereichte Reaktionen vergeben?',
+            'description' => 'Dürfen User auf eingereichten Zitate reagieren?',
             'optionscode' => 'yesno',
             'value' => '1', // Default
             'disporder' => 15
 		),
 		'inplayquotes_reactions_option' => array(
 			'title' => 'Vergabe der Reaktionen',
-            'description' => 'Darf jeder Spieler nur einmal insgesamt (egal welcher Charakter) auf ein Zitat reagieren oder mit jedem Charakter jeweils einmal?<br><b>Hinweis:</b> Die einmalige vergabe bezieht sich auf jede Reaktionsmöglichkeit einzeln.',
+            'description' => 'Darf jeder Spieler nur einmal insgesamt (egal welcher Charakter) auf ein Zitat reagieren oder mit jedem Charakter jeweils einmal?<br><b>Hinweis:</b> Die einmalige Vergabe bezieht sich auf jede Reaktionsmöglichkeit einzeln.',
             'optionscode' => 'select\n0=pro Spieler\n1=pro Charakter',
             'value' => '1', // Default
             'disporder' => 16
@@ -234,7 +234,7 @@ function inplayquotes_install(){
 		'inplayquotes_playername' => array(
 			'title' => 'Spielername',
 			'description' => 'Wie lautet die FID / der Identifikator von dem Profilfeld/Steckbrieffeld für den Spielernamen?<br>
-            <b>Hinweis:</b> Bei klassischen Profilfeldern muss eine Zahl eintragen werden. Bei dem Steckbrief-Plugin von Risuena muss der Name/Identifikator des Felds eingetragen werden.',
+            <b>Hinweis:</b> Bei klassischen Profilfeldern muss eine Zahl eingetragen werden. Bei dem Steckbrief-Plugin von Risuena muss der Name/Identifikator des Felds eingetragen werden.',
 			'optionscode' => 'text',
 			'value' => '4', // Default
 			'disporder' => 17
@@ -283,7 +283,7 @@ function inplayquotes_install(){
 		),
 		'inplayquotes_indexarea' => array(
 			'title' => 'Anzeige auf dem Index',
-            'description' => 'Soll ein zufälliges Inplayzitat über einer bestimmten Forum dargestellt werden? Die Index-Variable kann dennoch benutzt werden.',
+            'description' => 'Soll ein zufälliges Inplayzitat über einem bestimmten Forum dargestellt werden? Die Index-Variable kann dennoch benutzt werden.',
             'optionscode' => 'forumselectsingle',
             'value' => '', // Default
             'disporder' => 24
