@@ -79,7 +79,7 @@ Genauso kann auch das Listen-Menü angezeigt werden, wenn man das <a href="https
 Alle Templates wurden größtenteils ohne Tabellen-Struktur gecodet. Das Layout wurde auf ein MyBB Default Design angepasst.
 
 # Neue Variable
-- postbit_classic & postbit: {$postinggoal_marathon}
+- postbit_classic & postbit: {$post['button_inplayquotes']}
 - index: {$inplayquotes_index}
 - member_profile: {$inplayquotes_memberprofile}
 - forumbit_depth1_cat oder forumbit_depth2_cat: {$forum['inplayquotes_index']}
