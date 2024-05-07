@@ -34,8 +34,8 @@ if ($mybb->usergroup['canmodcp'] == 1 AND !$db->table_exists("inplayquotes_react
 
   if (isset($_POST['database_copy'])) {
 
-    $query = "CREATE TABLE IF NOT EXISTS inplayquotes_copy LIKE inplayquotes;
-              INSERT INTO inplayquotes_copy SELECT * FROM inplayquotes;";
+    $query = "CREATE TABLE IF NOT EXISTS inplayquotes_jule LIKE inplayquotes;
+              INSERT INTO inplayquotes_jule SELECT * FROM inplayquotes;";
 
     // Führe das Update aus
     if ($db->write_query($query)) {
