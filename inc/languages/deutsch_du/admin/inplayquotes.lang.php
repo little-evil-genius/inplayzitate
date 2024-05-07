@@ -16,7 +16,7 @@ $l['inplayquotes_overview_option_delete_notice'] = "Soll dieses Upload-Element w
 $l['inplayquotes_overview_no_elements'] = "Bisher wurden keine Reaktionsmöglichkeiten für die Inplayzitate erstellt.";
 
 $l['inplayquotes_add'] = "Neue Reaktion hinzufügen";
-$l['inplayquotes_add_desc'] = "Hier kannst du eine Reaktionen für die Inplayziatet hinzufügen.";
+$l['inplayquotes_add_desc'] = "Hier kannst du eine Reaktion für die Inplayzitate hinzufügen.";
 $l['inplayquotes_add_error_name'] = "Du hast keinen Namen für diese Reaktion angegeben.";
 $l['inplayquotes_add_error_image'] = "Du hast keinen Pfad angegeben";
 $l['inplayquotes_add_logadmin'] = "Ein neue Reaktion wurde hinzugefügt ";
