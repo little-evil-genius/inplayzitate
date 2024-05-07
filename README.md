@@ -577,5 +577,5 @@ Mit den Variabeln {$characterfield['identifikator']} oder {$characterfield['fidX
 
 # Demo
 <img src="https://stormborn.at/plugins/inplayquotes_index.png">
-<img src="https://stormborn.at/plugins/inplayquotes_overview.png">
+<img src="https://stormborn.at/plugins/inplayquotes_overview2.png">
 <img src="https://stormborn.at/plugins/inplayquotes_reaction.png">
