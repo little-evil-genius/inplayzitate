@@ -26,21 +26,21 @@ $l['inplayquotes_filter_select_timestamp'] = "Zeitraum auswählen";
 
 $l['inplayquotes_index_headline'] = "Zufälliges Inplayzitat";
 $l['inplayquotes_index_link'] = "Alle Inplayzitate";
-$l['inplayquotes_index_bit_none'] = "es gibt noch keine denkwürdigen Inplaymoment!";
+$l['inplayquotes_index_bit_none'] = "es gibt noch keinen denkwürdigen Inplaymoment!";
 
 $l['inplayquotes_memberprofile_headline'] = "Zitat aus dem Inplay";
 $l['inplayquotes_memberprofile_link'] = "Alle Zitate von {1}";
 $l['inplayquotes_memberprofile_bit_none'] = "Dieser Charakter wurde noch nicht aus dem Inplay zitiert!";
 
 $l['inplayquotes_allreactions_delete'] = "Alle Reaktionen löschen";
-$l['inplayquote_redirect_allreactions_delete'] = "Du hast erfolgreich alle Reaktion von diesem Inplayzitat gelöscht! Du  wirst nun zurück zur Übersicht der Inplayzitate geleitet";
+$l['inplayquote_redirect_allreactions_delete'] = "Du hast erfolgreich alle Reaktionen von diesem Inplayzitat gelöscht! Du  wirst nun zurück zur Übersicht der Inplayzitate geleitet";
 $l['inplayquotes_quote_delete'] = "Zitat löschen";
-$l['inplayquote_redirect_quote_delete'] = "Du hast erfolgreich ein das Inplayzitat gelöscht! Du  wirst nun zurück zur Übersicht der Inplayzitate geleitet";
-$l['inplayquote_redirect_reactions_delete'] = "Du hast erfolgreich die Reaktion von diesem Inplayzitat gelöscht! Du  wirst nun zurück zur Übersicht der Inplayzitate geleitet";
+$l['inplayquote_redirect_quote_delete'] = "Du hast das Inplayzitat erfolgreich gelöscht! Du  wirst nun zurück zur Übersicht der Inplayzitate geleitet";
+$l['inplayquote_redirect_reactions_delete'] = "Du hast die Reaktion von diesem Inplayzitat erfolgreich gelöscht! Du wirst nun zurück zur Übersicht der Inplayzitate geleitet";
 
 
 $l['inplayquotes_reactions_add'] = "Reaktion hinzufügen";
-$l['inplayquotes_reactions_add_desc'] = "Smilie anklicken, um diesen als Reaktion hinzufügen";
+$l['inplayquotes_reactions_add_desc'] = "Smiley anklicken, um diesen als Reaktion hinzufügen";
 $l['inplayquotes_reactions_reacted'] = "Deine Reaktion";
 $l['inplayquotes_reactions_quote_preview'] = "<b>{1}</b>:<br>{2}";
 
