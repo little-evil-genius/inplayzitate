@@ -528,7 +528,7 @@ Es wird automatisch in jedes bestehende und neue Design hinzugefügt. Man sollte
 </blockquote>
 
 # Benutzergruppen-Berechtigungen setzen
-Damit alle Admin-Accounts Zugriff auf die Verwaltung der Reaktionsmöglichkeiten haben im ACP, müssen unter dem Reiter Benutzer & Gruppen » Administrator-Berechtigungen » Benutzergruppen-Berechtigungen die Berechtigungen einmal angepasst werden. Die Berechtigungen für die Inplayziatet befinden sich im Tab 'Konfiguration'.
+Damit alle Admin-Accounts Zugriff auf die Verwaltung der Reaktionsmöglichkeiten haben im ACP, müssen unter dem Reiter Benutzer & Gruppen » Administrator-Berechtigungen » Benutzergruppen-Berechtigungen die Berechtigungen einmal angepasst werden. Die Berechtigungen für die Inplayzitate befinden sich im Tab 'Konfiguration'.
 
 # Account löschen
 Damit die Löschung der Zitate in der Datenbank richtig funktioniert, wenn eingestellt, müssen Accounts über das Popup "Optionen" im ACP gelöscht werden. Im ACP werden alle Accounts unter dem Reiter Benutzer & Gruppen > Benutzer aufgelistet. Und bei jedem Account befindet sich rechts ein Optionen-Button. Wenn man diesen drückt, erscheint eine Auswahl von verschiedenen Möglichkeiten.
