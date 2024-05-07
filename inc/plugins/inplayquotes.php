@@ -1,4 +1,8 @@
 <?php
+
+// The idea for the reactions to the in-play quotes was inspired by the MyReactions plugin (https://github.com/MattRogowski/MyReactions) by Matt Rogowski. 
+// The images provided for the reactions also come from this plugin.
+
 // Direktzugriff auf die Datei aus Sicherheitsgründen sperren
 if(!defined("IN_MYBB"))
 {
@@ -27,7 +31,7 @@ if(class_exists('MybbStuff_MyAlerts_AlertTypeManager')) {
 function inplayquotes_info(){
 	return array(
 		"name"		=> "Inplayzitate",
-		"description"	=> "Erlaubt es Usern, Zitate aus dem Inplay einzufügen, die dann auf dem Index des Forums erscheinen.",
+		"description"	=> "User können denwürdige Inplaymomente als Zitat speichern",
 		"website"	=> "https://github.com/little-evil-genius/inplayzitate",
 		"author"	=> "little.evil.genius",
 		"authorsite"	=> "https://storming-gates.de/member.php?action=profile&uid=1712",
@@ -1126,17 +1130,6 @@ function inplayquotes_install(){
         // alte Tabelle löschen
         $db->drop_table("inplayquotes_jule");
     }
-
-    // Übertragung von den Daten von Jules Inplayzitaten Katjas Likes
-    if ($db->table_exists("ingamequotes_likes_jule")) {
-        // Führe den Datenübertrag aus
-        $db->query("INSERT INTO `".TABLE_PREFIX."inplayquotes_reactions` (rid, reaction, qid, uid, username) SELECT id,6,qid,uid,username FROM `".TABLE_PREFIX."ingamequotes_likes_jule`");
-
-        // alte Tabelle löschen
-        $db->drop_table("ingamequotes_likes_jule");
-    }
-
-
 }
  
 // Funktion zur Überprüfung des Installationsstatus; liefert true zurürck, wenn Plugin installiert, sonst false (optional).
@@ -3341,8 +3334,8 @@ function inplayquotes_get_allchars($uid) {
 	global $db, $cache, $mybb, $lang, $templates, $theme, $header, $headerinclude, $footer;
 
 	//für den fall nicht mit hauptaccount online
-	if (isset($mybb->user['as_uid'])) {
-        $as_uid = intval($mybb->user['as_uid']);
+	if (isset(get_user($uid)['as_uid'])) {
+        $as_uid = intval(get_user($uid)['as_uid']);
     } else {
         $as_uid = 0;
     }
