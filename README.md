@@ -560,7 +560,7 @@ Es gibt die Möglichkeit in den Templates "inplayquotes_index_bit", "inplayquote
 <br>
 <b>Szeneninformationen</b><br>
 Mit der Variable {$scenefield['XX']} können die verschiedenen Informationen aus den DB Tabellen der Tracker ausgegeben werden. Ich habe mich an die aktuellen (07.05.2024) Github Versionen und deren Tabellenstruktur gehalten. Solltet ihr etwas verändert haben, müsst ihr in die PHP und das entsprechende Array $scene_fields für das genutzte Trackersystem anpassen.<br>
-Entsprechende  Umformungen wie das die Namen der Charaktere der Szene angezeigt sind, sind in der PHP Datei vorhanden.
+Entsprechende Umformungen wie das die Namen der Charaktere in der Szene angezeigt werden, sind in der PHP Datei vorhanden.
 <br>
 <b>Inplaytracker 2.0 von sparks fly</b>
 Mögliche Felder (das XX durch den Namen vom Feld ersetzen:<br>
