@@ -1,4 +1,11 @@
 # Inplayzitate
+Das Zitat-Plugin ermöglicht es den Benutzern, Zitate aus einem bestimmten Bereich des Forums einzureichen. Diese Zitate werden auf einer Übersichtsseite angezeigt, wobei ein zufälliges Zitat auf der Indexseite erscheint. Benutzer können je nach Einstellung Reaktionen für die einzelnen Zitate vergeben. Die Reaktionen können im Administrationsbereich (ACP) konfiguriert werden.<br>
+<br>
+Die Übersichtsseite bietet verschiedene Filtermöglichkeiten und kann auch in mehrere Seiten unterteilt werden, um eine bessere Navigation zu ermöglichen. In den Einstellungen des Plugins kann festgelegt werden, ob das zufällige Zitat auf der Indexseite zwischen den Foren angezeigt werden soll. Die Anzeige auf dem Index kann pro Design individuell entschieden werden, es muss nur die entsprechende Variable eingesetzt werden. (Das Forum bleibt dennoch gleich.)<br>
+<br>
+Die angezeigte Grafik der zitierten Charaktere kann entweder der Avatar, eine Grafik aus dem Upload-System oder ein Link aus einem Profilfeld/Steckbrieffeld sein.<br>
+Zusätzlich zum Szenentitel und Postdatum können auch nach Wunsch alle weiteren Informationen zur Szene, aus der das Zitat stammt, im Template ausgegeben werden. Es besteht auch die Möglichkeit, alle Profilfelder/Steckbriefe des zitierten Charakters anzuzeigen.
+<br>
 <br>
 Die Idee zu den Reaktionen auf die Inplayzitate wurde von dem Plugin <a href="https://github.com/MattRogowski/MyReactions">MyReactions</a> von <a href="https://matt.rogow.ski/">Matt Rogowski</a> inspiriert. Die mitgelieferten Bilder für die Reaktionen stammen auch aus diesem Plugin.
 
