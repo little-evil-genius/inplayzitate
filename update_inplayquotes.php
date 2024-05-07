@@ -4,7 +4,8 @@ require("global.php");
 
 global $db, $mybb, $lang;
 echo (
-  '<style type="text/css">
+  '<meta charset="UTF-8">
+  <style type="text/css">
 body {
   background-color: #efefef;
   text-align: center;
@@ -33,17 +34,27 @@ if ($mybb->usergroup['canmodcp'] == 1 AND !$db->table_exists("inplayquotes_react
   echo '</form>';
 
   if (isset($_POST['database_copy'])) {
+    
+    $db->query("CREATE TABLE ".TABLE_PREFIX."inplayquotes_jule(
+        `qid` int(11) NOT NULL AUTO_INCREMENT,
+        `uid` int(11) NOT NULL,
+        `tid` int(11) NOT NULL,
+        `pid` int(11) NOT NULL,
+        `timestamp` int(21) NOT NULL,
+        `quote` varchar(500) COLLATE utf8_general_ci NOT NULL,
+        PRIMARY KEY (`qid`),
+        KEY `qid` (`qid`)
+    ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci AUTO_INCREMENT=1 ");
 
-    $query = "CREATE TABLE IF NOT EXISTS inplayquotes_jule LIKE inplayquotes;
-              INSERT INTO inplayquotes_jule SELECT * FROM inplayquotes;";
-
-    // Führe das Update aus
-    if ($db->write_query($query)) {
-        echo "Die Tabelle wurde erfolgreich gesichert. Jules Plugin kann deinstalliert werden und dann meins installiert werden.";
-    } else {
-        echo "Fehler beim sichern der Tabelle.";
+    $result = $db->query("SELECT * FROM ".TABLE_PREFIX."inplayquotes");
+    while($row = $db->fetch_array($result)) {
+        $quote = $db->escape_string($row['quote']);
+        $db->query("INSERT INTO ".TABLE_PREFIX."inplayquotes_jule (uid, tid, pid, timestamp, quote)
+                    VALUES ('".$row['uid']."', '".$row['tid']."', '".$row['pid']."', '".$row['timestamp']."', '$quote')");
     }
-  }
+
+    echo "Datenbanktabelle erfolgreich gesichert und übertragen!";
+}
 
   echo '<div style="width:100%; background-color: rgb(121 123 123 / 50%); display: flex; position:fixed; bottom:0;right:0; height:50px; justify-content: center; align-items:center; gap:20px;">
 <div> <a href="https://github.com/little-evil-genius/inplayzitate" target="_blank">Github Rep</a></div>
