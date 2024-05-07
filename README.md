@@ -26,7 +26,7 @@ hinzugefügte Tabelle:
 - Erlaubte Gruppen
 - Zitate Bereich
 - ausgeschlossene Foren
-- Benachrichtigungsystem
+- Benachrichtigungssystem
 - Gästeberechtigung
 - Zitate pro Seite
 - Filteroptionen
@@ -547,7 +547,7 @@ index.php?module=config-inplayquotes<br>
 <b>Übersicht der Zitate</b><br>
 misc.php?action=inplayquotes
 
-# extra Variabeln
+# extra Variablen
 Es gibt die Möglichkeit in den Templates "inplayquotes_index_bit" und "inplayquotes_overview_bit" die Charakternamen verschieden darzustellen:
 - normaler Name: {$charactername}
 - normaler Name als Link: {$charactername_link}
@@ -559,8 +559,8 @@ Es gibt die Möglichkeit in den Templates "inplayquotes_index_bit" und "inplayqu
 Es gibt die Möglichkeit in den Templates "inplayquotes_index_bit", "inplayquotes_overview_bit" und "inplayquotes_memberprofile_bit" weitere Informationen über die Szene oder den Account/Charakter selbst:<br>
 <br>
 <b>Szeneninformationen</b><br>
-Mit der Variable {$scenefield['XX']} können die verschiedenen Informationen aus den DB Tabellen der Tracker ausgegeben werden. Ich habe mich an die aktuellen Github Versionen und deren Tabellenstruktu gehalten. Solltet ihr etwas verändert haben, müsst ihr in die PHP und das entsprechende Array $scene_fields für das genutzte Trackerystem anpassen.<br>
-Entsprechenden Umformungen wie das die Namen der Charaktere der Szene angezeigt sind in der PHP Datei vorhanden.
+Mit der Variable {$scenefield['XX']} können die verschiedenen Informationen aus den DB Tabellen der Tracker ausgegeben werden. Ich habe mich an die aktuellen (07.05.2024) Github Versionen und deren Tabellenstruktur gehalten. Solltet ihr etwas verändert haben, müsst ihr in die PHP und das entsprechende Array $scene_fields für das genutzte Trackersystem anpassen.<br>
+Entsprechende  Umformungen wie das die Namen der Charaktere der Szene angezeigt sind, sind in der PHP Datei vorhanden.
 <br>
 <b>Inplaytracker 2.0 von sparks fly</b>
 Mögliche Felder (das XX durch den Namen vom Feld ersetzen:<br>
@@ -580,15 +580,15 @@ $scene_fields = ["spieler", "date", "ort", "ip_time"];<br>
 <br>
 <br>
 <b>Charakterinformationen</b><br>
-Mit den Variabeln {$characterfield['identifikator']} oder {$characterfield['fidX']} können alle Informationen zu dem Account/Charakter aus den DB Tabellen userfields (Profilfelder) und application_ucp_userfields (Steckbrieffelder) ausgegeben werden. 
+Mit den Variablen {$characterfield['identifikator']} oder {$characterfield['fidX']} können alle Informationen zu dem Account/Charakter aus den DB Tabellen userfields (Profilfelder) und application_ucp_userfields (Steckbrieffelder) ausgegeben werden. 
 
 # Inplayzitate von sparks fly 2.0 oder 3.0 übertragen
-1. Backup machen (DB und Webspace Datein) 
+1. Backup machen (DB und Webspace Dateien) 
 2. Nur das Update Script hochladen (Hauptverzeichnis vom Forum - kein Unterordner, wie inc!)
 3. LINK/update_inplayquotes.php aufrufen und Button drücken
 4. im ACP das Inplayzitate Plugin deinstallieren
-5. Datein vom alten Inplayzitate Plugin entfernen auf dem Webspace
-6. die Datein von diesem Plugin hochladen
+5. Dateien vom alten Inplayzitate Plugin auf dem Webspace entfernen
+6. die Dateien von diesem Plugin hochladen
 7. im ACP installieren
 
 # Demo
