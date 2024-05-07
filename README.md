@@ -575,6 +575,15 @@ $scene_fields = ["spieler", "date", "ort", "ip_time"];<br>
 <b>Charakterinformationen</b><br>
 Mit den Variabeln {$characterfield['identifikator']} oder {$characterfield['fidX']} können alle Informationen zu dem Account/Charakter aus den DB Tabellen userfields (Profilfelder) und application_ucp_userfields (Steckbrieffelder) ausgegeben werden. 
 
+# Inplayzitate von sparks fly 2.0 oder 3.0 übertragen
+1. Backup machen (DB und Webspace Datein) 
+2. Nur das Update Script hochladen (Hauptverzeichnis vom Forum - kein Unterordner, wie inc!)
+3. LINK/update_inplayquotes.php aufrufen und Button drücken
+4. im ACP das Inplayzitate Plugin deinstallieren
+5. Datein vom alten Inplayzitate Plugin entfernen auf dem Webspace
+6. die Datein von diesem Plugin hochladen
+7. im ACP installieren
+
 # Demo
 <img src="https://stormborn.at/plugins/inplayquotes_index.png">
 <img src="https://stormborn.at/plugins/inplayquotes_overview2.png">
