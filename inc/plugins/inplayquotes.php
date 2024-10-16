@@ -12,10 +12,12 @@ if(!defined("IN_MYBB"))
 // HOOKS
 $plugins->add_hook("admin_config_settings_change", "inplayquotes_settings_change");
 $plugins->add_hook("admin_settings_print_peekers", "inplayquotes_settings_peek");
-$plugins->add_hook("admin_config_action_handler", "inplayquotes_admin_config_action_handler");
-$plugins->add_hook("admin_config_permissions", "inplayquotes_admin_config_permissions");
-$plugins->add_hook("admin_config_menu", "inplayquotes_admin_config_menu");
+$plugins->add_hook("admin_rpgstuff_action_handler", "inplayquotes_admin_rpgstuff_action_handler");
+$plugins->add_hook("admin_rpgstuff_permissions", "inplayquotes_admin_rpgstuff_permissions");
+$plugins->add_hook("admin_rpgstuff_menu", "inplayquotes_admin_rpgstuff_menu");
 $plugins->add_hook("admin_load", "inplayquotes_admin_manage");
+$plugins->add_hook('admin_rpgstuff_update_stylesheet', 'inplayquotes_admin_update_stylesheet');
+$plugins->add_hook('admin_rpgstuff_update_plugin', 'inplayquotes_admin_update_plugin');
 $plugins->add_hook("admin_user_users_delete_commit_end", "inplayquotes_user_delete");
 $plugins->add_hook("postbit", "inplayquotes_postbit");
 $plugins->add_hook("misc_start", "inplayquotes_misc");
@@ -44,10 +46,16 @@ function inplayquotes_info(){
 // Diese Funktion wird aufgerufen, wenn das Plugin installiert wird (optional).
 function inplayquotes_install(){
     
-    global $db, $cache, $mybb, $lang;
+    global $db, $lang;
 
     // SPRACHDATEI
     $lang->load("inplayquotes");
+
+    // RPG Stuff Modul muss vorhanden sein
+    if (!file_exists(MYBB_ADMIN_DIR."/modules/rpgstuff/module_meta.php")) {
+		flash_message($lang->inplayquotes_error_rpgstuff, 'error');
+		admin_redirect('index.php?module=config-plugins');
+	}
 
     // Accountswitcher muss vorhanden sein
     if (!function_exists('accountswitcher_is_installed')) {
@@ -56,44 +64,7 @@ function inplayquotes_install(){
 	}
 
     // DATENBANKEN ERSTELLEN
-    // Inplayzitate
-    $db->query("CREATE TABLE ".TABLE_PREFIX."inplayquotes(
-        `qid` int(11) unsigned NOT NULL AUTO_INCREMENT,
-        `uid` int(11) unsigned NOT NULL,
-        `username` VARCHAR(120) COLLATE utf8_general_ci NOT NULL,
-        `tid` int(11) unsigned NOT NULL,
-        `pid` int(11) unsigned NOT NULL,
-        `date` int(11) unsigned NOT NULL,
-        `quote` VARCHAR(5000) COLLATE utf8_general_ci NOT NULL,
-        PRIMARY KEY(`qid`),
-        KEY `qid` (`qid`)
-        )
-        ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci AUTO_INCREMENT=1    
-    ");
-
-    // Inplayzitate vergebenen Reaktionen
-    $db->query("CREATE TABLE ".TABLE_PREFIX."inplayquotes_reactions(
-        `rid` int(11) unsigned NOT NULL AUTO_INCREMENT,
-        `reaction` int(11) unsigned NOT NULL,
-        `qid` int(11) unsigned NOT NULL,
-        `uid` int(11) unsigned NOT NULL,
-        `username` VARCHAR(120) COLLATE utf8_general_ci NOT NULL,
-        PRIMARY KEY(`rid`),
-        KEY `rid` (`rid`)
-        )
-        ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci AUTO_INCREMENT=1    
-    ");
-
-    // Inplayzitate Reaktionen Einstellungen
-    $db->query("CREATE TABLE ".TABLE_PREFIX."inplayquotes_reactions_settings(
-        `rsid` int(10) unsigned NOT NULL AUTO_INCREMENT,
-        `name` varchar(255) COLLATE utf8_general_ci NOT NULL,
-        `image` varchar(255) COLLATE utf8_general_ci NOT NULL,
-        PRIMARY KEY(`rsid`),
-        KEY `rsid` (`rsid`)
-        )
-        ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci AUTO_INCREMENT=1    
-    ");
+    inplayquotes_database();
 
     // STANDARD REAKTIONEN
     $first_reactions = ["Scream", "Smirk", "Fire", "Laughing", "HeartEyes", "Heart"];
@@ -103,199 +74,20 @@ function inplayquotes_install(){
             "image" => $db->escape_string("images/inplayquotes/".$reaction.".png"),
         );
         
-        $insert_array = $db->insert_query("inplayquotes_reactions_settings", $standard_reactions);
+        $db->insert_query("inplayquotes_reactions_settings", $standard_reactions);
     }
 
 	// EINSTELLUNGEN HINZUFÜGEN
-    $maxdisporder = $db->fetch_field($db->query("SELECT MAX(disporder) FROM ".TABLE_PREFIX."settinggroups"), "MAX(disporder)")+1;
+    $maxdisporder = $db->fetch_field($db->query("SELECT MAX(disporder) FROM ".TABLE_PREFIX."settinggroups"), "MAX(disporder)");
 	$setting_group = array(
 		'name'          => 'inplayquotes',
 		'title'         => 'Inplayzitate',
 		'description'   => 'Einstellungen für die Inplayzitate',
-		'disporder'     => $maxdisporder,
+		'disporder'     => $maxdisporder+1,
 		'isdefault'     => 0
 	);
-			
-	$gid = $db->insert_query("settinggroups", $setting_group); 
-			
-	$setting_array = array(
-        'inplayquotes_allowgroups' => array(
-            'title' => 'Erlaubte Gruppen',
-			'description' => 'Welche Gruppen dürfen Zitate hinzufügen?',
-			'optionscode' => 'groupselect',
-			'value' => '4', // Default
-			'disporder' => 1
-        ),
-		'inplayquotes_quotesarea' => array(
-			'title' => 'Zitate Bereich',
-            'description' => 'Aus welchem Bereich vom Forum können User Zitate einreichen? Es reicht aus, die übergeordneten Kategorien zu markieren.',
-            'optionscode' => 'forumselect',
-            'value' => 'none', // Default
-            'disporder' => 2
-		),
-		'inplayquotes_excludedarea' => array(
-			'title' => 'ausgeschlossene Foren',
-            'description' => 'Gibt es Foren, die innerhalb der ausgewählten Kategorie liegen aber nicht zum Zitate Bereich gezählt werden sollen (z.B. Communication).',
-            'optionscode' => 'forumselect',
-            'value' => 'none', // Default
-            'disporder' => 3
-		),
-		'inplayquotes_user_alert' => array(
-			'title' => 'Benachrichtigungssystem',
-			'description' => 'Wie sollen User darüber in Kenntnis gesetzt werden, dass sie aus dem Inplay zitiert wurden?',
-			'optionscode' => 'select\n0=MyAlerts\n1=Private Nachricht',
-			'value' => 0, // Default
-			'disporder' => 4
-		),
-		'inplayquotes_overview_guest' => array(
-			'title' => 'Gästeberechtigung',
-            'description' => 'Dürfen Gäste die Übersicht aller Inplayzitate sehen?',
-            'optionscode' => 'yesno',
-            'value' => '1', // Default
-            'disporder' => 5
-		),
-		'inplayquotes_overview_multipage' => array(
-			'title' => 'Zitate pro Seite',
-            'description' => 'Wie viele Inplayzitate sollen pro Seite der Übersicht angezeigt werden (0 = Keine Beschränkung)?',
-            'optionscode' => 'numeric',
-            'value' => '0', // Default
-            'disporder' => 6
-		),
-		'inplayquotes_overview_filter' => array(
-			'title' => 'Filteroptionen',
-            'description' => 'Nach welchen Optionen können die Zitate auf der Übersichtsseite gefiltert werden?',
-            'optionscode' => 'checkbox\nplayer=nach Spieler\ncharacter=nach Charakter\ntimestamp=nach Postdatum',
-            'value' => '', // Default
-            'disporder' => 7
-		),
-		'inplayquotes_overview_graphic' => array(
-			'title' => 'Grafiktyp',
-            'description' => 'Welche Grafik soll vom zitierten Charakter angezeigt werden? Zur Auswahl steht klassisch der Avatar, ein Element aus dem Uploadsystem von little.evil.genius, ein klassisches Profilfeld oder ein Feld aus dem Steckbriefplugin von risuena.',
-            'optionscode' => 'select\n0=Avatar\n1=Upload-Element\n2=Profilfeld\n3=Steckbrieffeld',
-            'value' => '0', // Default
-            'disporder' => 8
-		),
-		'inplayquotes_overview_graphic_uploadsystem' => array(
-			'title' => 'Identifikator von dem Upload-Element',
-            'description' => 'Wie lautet der Identifikator von dem Upload-Element, welches vom zitierten Charakter als Grafik genutzt werden soll',
-            'optionscode' => 'text',
-            'value' => 'index', // Default
-            'disporder' => 9
-		),
-		'inplayquotes_overview_graphic_profilefield' => array(
-			'title' => 'FID von dem Profilfeld',
-            'description' => 'Wie lautet die FID von dem Profilfeld, welches vom zitierten Charakter als Grafik genutzt werden soll?',
-            'optionscode' => 'numeric',
-            'value' => '6', // Default
-            'disporder' => 10
-		),
-		'inplayquotes_overview_graphic_characterfield' => array(
-			'title' => 'Identifikator von dem Steckbrieffeld',
-            'description' => 'Wie lautet der Identifikator von dem Steckbrieffeld, welches vom zitierten Charakter als Grafik genutzt werden soll?',
-            'optionscode' => 'text',
-            'value' => 'index_pic', // Default
-            'disporder' => 11
-		),
-		'inplayquotes_overview_graphic_defaultgraphic' => array(
-			'title' => 'Standard-Grafik',
-            'description' => 'Wie heißt die Bilddatei für die Standard-Grafik? Diese Grafik wird, falls ein Charakter noch keine entsprechende Grafik besitzt, oder es sich um einen gelöschten Charakter handelt, stattdessen angezeigt. Damit die Grafik für jedes Design angepasst wird, sollte der Dateiname in allen Ordner für die Designs gleich heißen.',
-            'optionscode' => 'text',
-            'value' => 'default_avatar.png', // Default
-            'disporder' => 12
-		),
-        'inplayquotes_overview_graphic_guest' => array(
-            'title' => 'Gäste-Ansicht',
-            'description' => 'Sollen die Grafiken von den zitierten Charakteren vor Gästen versteckt werden? Statt der Grafik wird die festgelegte Standard-Grafik angezeigt.',
-            'optionscode' => 'yesno',
-            'value' => '1', // Default
-            'disporder' => 13
-        ),
-        'inplayquotes_profilfeldsystem' => array(
-            'title' => 'Profilfeldsystem',
-            'description' => 'Um zusätzliche Informationen über dem zitierten Charakter/Spieler auszugeben, muss angegeben werden, mit welchem Profilfeldsystem gearbeitet wird. Es kann auch ausgewählt werden, dass beide Varianten verwendet werden.',
-            'optionscode' => 'select\n0=klassische Profilfelder\n1=Steckbrief-Plugin\n2=beide Varianten',
-            'value' => '0', // Default
-            'disporder' => 14
-        ),
-		'inplayquotes_reactions' => array(
-			'title' => 'Overview: Reaktionen auf Zitate',
-            'description' => 'Dürfen User auf eingereichten Zitate reagieren?',
-            'optionscode' => 'yesno',
-            'value' => '1', // Default
-            'disporder' => 15
-		),
-		'inplayquotes_reactions_option' => array(
-			'title' => 'Vergabe der Reaktionen',
-            'description' => 'Darf jeder Spieler nur einmal insgesamt (egal welcher Charakter) auf ein Zitat reagieren oder mit jedem Charakter jeweils einmal?<br><b>Hinweis:</b> Die einmalige Vergabe bezieht sich auf jede Reaktionsmöglichkeit einzeln.',
-            'optionscode' => 'select\n0=pro Spieler\n1=pro Charakter',
-            'value' => '1', // Default
-            'disporder' => 16
-		),
-		'inplayquotes_playername' => array(
-			'title' => 'Spielername',
-			'description' => 'Wie lautet die FID / der Identifikator von dem Profilfeld/Steckbrieffeld für den Spielernamen?<br>
-            <b>Hinweis:</b> Bei klassischen Profilfeldern muss eine Zahl eingetragen werden. Bei dem Steckbrief-Plugin von Risuena muss der Name/Identifikator des Felds eingetragen werden.',
-			'optionscode' => 'text',
-			'value' => '4', // Default
-			'disporder' => 17
-		),
-		'inplayquotes_inplaytracker' => array(
-			'title' => 'Szeneninformation ausgeben',
-            'description' => 'Um zusätzliche Informationen über die Szene ausgeben zu können, aus der das Zitat stammt, muss angegeben werden welcher Inplaytracker benutzt wird.',
-            'optionscode' => 'select\n0=keine Informationen\n1=Inplaytracker 2.0 von sparks fly\n2=Inplaytracker 3.0 von sparks fly\n3=Szenentracker von risuena\n4=Inplaytracker von little.evil.genius\n5=Inplaytracker von Ales',
-            'value' => '0', // Default
-            'disporder' => 18
-		),
-        'inplayquotes_lists' => array(
-            'title' => 'Listen PHP',
-            'description' => 'Wie heißt die Hauptseite der Listen-Seite? Dies dient zur Ergänzung der Navigation. Falls nicht gewünscht einfach leer lassen.',
-            'optionscode' => 'text',
-            'value' => 'lists.php', // Default
-            'disporder' => 19
-        ),
-		'inplayquotes_lists_type' => array(
-			'title' => 'Listen Menü',
-			'description' => 'Soll über die Variable {$lists_menu} das Menü der Listen aufgerufen werden?<br>Wenn ja, muss noch angegeben werden, ob eine eigene PHP-Datei oder das Automatische Listen-Plugin von sparks fly genutzt?',
-			'optionscode' => 'select\n0=eigene Listen/PHP-Datei\n1=Automatische Listen-Plugin\n2=keine Menü-Anzeige',
-			'value' => '2', // Default
-			'disporder' => 20
-		),
-        'inplayquotes_lists_menu' => array(
-            'title' => 'Listen Menü Template',
-            'description' => 'Damit das Listen Menü richtig angezeigt werden kann, muss hier einmal der Name von dem Tpl von dem Listen-Menü angegeben werden.',
-            'optionscode' => 'text',
-            'value' => 'lists_nav', // Default
-            'disporder' => 21
-        ),
-		'inplayquotes_profile' => array(
-			'title' => 'zufälliges Zitat im Profil',
-            'description' => 'Soll im Profil ein zufälliges Zitat des Charakters angezeigt werden? Sollte kein passendes Zitat vorhanden sein, wird ein Default Text angezeigt.',
-            'optionscode' => 'yesno',
-            'value' => '0', // Default
-            'disporder' => 22
-		),
-		'inplayquotes_deletion' => array(
-			'title' => 'Zitat löschen',
-            'description' => 'Sollen Inplayzitate von gelöschten Usern gelöscht werden?',
-            'optionscode' => 'yesno',
-            'value' => '0', // Default
-            'disporder' => 23
-		),
-		'inplayquotes_indexarea' => array(
-			'title' => 'Anzeige auf dem Index',
-            'description' => 'Soll ein zufälliges Inplayzitat über einem bestimmten Forum dargestellt werden? Die Index-Variable kann dennoch benutzt werden.',
-            'optionscode' => 'forumselectsingle',
-            'value' => '', // Default
-            'disporder' => 24
-		),
-	);
-			
-	foreach($setting_array as $name => $setting)
-	{
-		$setting['name'] = $name;
-		$setting['gid']  = $gid;
-		$db->insert_query('settings', $setting);
-	}
+	$db->insert_query("settinggroups", $setting_group); 
+    inplayquotes_settings();
 	rebuild_settings();
 
     // TEMPLATES ERSTELLEN
@@ -305,802 +97,19 @@ function inplayquotes_install(){
         "title" => $db->escape_string("Inplayzitate"),
     );
     $db->insert_query("templategroups", $templategroup);
-
-    $insert_array = array(
-        'title'		=> 'inplayquotes_index',
-        'template'	=> $db->escape_string('<div class="inplayquotes_index">
-        <div class="inplayquotes_index-headline">{$lang->inplayquotes_index_headline}</div>
-        {$inplayquote_bit}
-        <div class="inplayquotes_index-allquotes">
-            <span class="smalltext"><a href="misc.php?action=inplayquotes">{$lang->inplayquotes_index_link}</a></span>
-        </div>
-    </div>'),
-        'sid'		=> '-2',
-        'dateline'	=> TIME_NOW
-    );
-    $db->insert_query("templates", $insert_array);
-
-    $insert_array = array(
-        'title'		=> 'inplayquotes_index_bit',
-        'template'	=> $db->escape_string('<div class="inplayquotes_index_bit">
-        <div class="inplayquotes_index_bit_avatar">
-            <img src="{$graphic_link}">
-            {$del_quote}
-        </div>
-        <div class="inplayquotes_index_bit_container">
-            <div class="inplayquotes_index_bit_quote">
-                {$inplayquote}
-            </div>
-            <div class="inplayquotes_index_bit_footer">
-                <div class="inplayquotes_index_bit_reaction">{$reactions}</div>
-                <div class="inplayquotes_index_bit_user">
-                    <b>{$charactername_link}</b><br>
-                    <span>{$scene_link}</span><br>
-                    <span>{$postdate}</span>
-                </div>
-            </div>
-        </div>
-    </div>'),
-        'sid'		=> '-2',
-        'dateline'	=> TIME_NOW
-    );
-    $db->insert_query("templates", $insert_array);
-
-    $insert_array = array(
-        'title'		=> 'inplayquotes_index_bit_none',
-        'template'	=> $db->escape_string('<div class="inplayquotes_index_bit">
-        {$lang->inplayquotes_index_bit_none}
-    </div>'),
-        'sid'		=> '-2',
-        'dateline'	=> TIME_NOW
-    );
-    $db->insert_query("templates", $insert_array);
-
-    $insert_array = array(
-        'title'		=> 'inplayquotes_memberprofile',
-        'template'	=> $db->escape_string('<div class="inplayquotes_memberprofile">
-        <div class="inplayquotes_memberprofile-headline">{$lang->inplayquotes_memberprofile_headline}</div>
-        {$inplayquote_bit}
-        <div class="inplayquotes_memberprofile-allquotes">
-            <span class="smalltext">{$all_inplayquotes}</span>
-        </div>
-    </div>'),
-        'sid'		=> '-2',
-        'dateline'	=> TIME_NOW
-    );
-    $db->insert_query("templates", $insert_array);
-
-    $insert_array = array(
-        'title'		=> 'inplayquotes_memberprofile_bit',
-        'template'	=> $db->escape_string('<div class="inplayquotes_memberprofile_bit">
-        <div class="inplayquotes_memberprofile_bit_container">
-            <div class="inplayquotes_memberprofile_bit_quote">
-                {$inplayquote}
-            </div>
-            <div class="inplayquotes_memberprofile_bit_footer">
-                <span>{$scene_link}</span><br>
-                <span>{$postdate}</span>
-            </div>
-        </div>
-    </div>'),
-        'sid'		=> '-2',
-        'dateline'	=> TIME_NOW
-    );
-    $db->insert_query("templates", $insert_array);
-
-    $insert_array = array(
-        'title'		=> 'inplayquotes_memberprofile_bit_none',
-        'template'	=> $db->escape_string('<div class="inplayquotes_memberprofile_bit">
-        <div class="inplayquotes_memberprofile_bit_container">
-            {$lang->inplayquotes_memberprofile_bit_none}
-        </div>
-    </div>'),
-        'sid'		=> '-2',
-        'dateline'	=> TIME_NOW
-    );
-    $db->insert_query("templates", $insert_array);
-
-    $insert_array = array(
-        'title'		=> 'inplayquotes_overview',
-        'template'	=> $db->escape_string('<html>
-        <head>
-            <title>{$mybb->settings[\'bbname\']} - {$lang->inplayquotes_overview}</title>
-            {$headerinclude}</head>
-        <body>
-            {$header}
-            <table width="100%" cellspacing="{$theme[\'borderwidth\']}" cellpadding="{$theme[\'tablespace\']}">
-                <tr>
-                    <td valign="top">
-                        <div id="inplayquotes_overview">
-                            <div class="inplayquotes-headline">{$lang->inplayquotes_overview}</div>
-                            {$filter_option}
-                            <div class="inplayquotes-body">
-                                {$inplayquotes_bit}
-                                {$multipage}
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-            </table>
-            {$footer}
-        </body>
-    </html>'),
-        'sid'		=> '-2',
-        'dateline'	=> TIME_NOW
-    );
-    $db->insert_query("templates", $insert_array);
-
-    $insert_array = array(
-        'title'		=> 'inplayquotes_overview_bit',
-        'template'	=> $db->escape_string('<div class="inplayquotes_overview_bit">
-        <div class="inplayquotes_overview_bit_avatar">
-            <img src="{$graphic_link}">
-            {$del_quote}
-        </div>
-        <div class="inplayquotes_overview_bit_container">
-            <div class="inplayquotes_overview_bit_quote">
-                {$inplayquote}
-            </div>
-            <div class="inplayquotes_overview_bit_footer">
-                <div class="inplayquotes_overview_bit_reaction">{$reactions}</div>
-                <div class="inplayquotes_overview_bit_user">
-                    <b>{$charactername_link}</b><br>
-                    <span>{$scene_link}</span><br>
-                    <span>{$postdate}</span>
-                </div>
-            </div>
-        </div>
-    </div>'),
-        'sid'		=> '-2',
-        'dateline'	=> TIME_NOW
-    );
-    $db->insert_query("templates", $insert_array);
-
-    $insert_array = array(
-        'title'		=> 'inplayquotes_overview_filter',
-        'template'	=> $db->escape_string('<form id="inplayquotes_filter" method="get" action="misc.php">
-        <input type="hidden" name="action" value="inplayquotes" />
-        <div class="inplayquotes-filter">
-            <div class="inplayquotes-filter-headline">{$lang->inplayquotes_filter}</div>
-            <div class="inplayquotes-filteroptions">
-                {$filter_bit}
-            </div>
-            <center>
-                <input type="submit" name="inplayquotes_search_filter" value="{$lang->inplayquotes_filter_button}" id="inplayquotes_search_filter" class="button">
-            </center>
-        </div>
-    </form>'),
-        'sid'		=> '-2',
-        'dateline'	=> TIME_NOW
-    );
-    $db->insert_query("templates", $insert_array);
-
-    $insert_array = array(
-        'title'		=> 'inplayquotes_overview_filter_bit',
-        'template'	=> $db->escape_string('<div class="inplayquotes_overview_filter_bit">
-        <div class="inplayquotes-filter-bit-headline">{$filter_headline}</div>
-        <div class="inplayquotes-filter-bit-dropbox">
-            {$filter_select}
-        </div>
-    </div>'),
-        'sid'		=> '-2',
-        'dateline'	=> TIME_NOW
-    );
-    $db->insert_query("templates", $insert_array);
-
-    $insert_array = array(
-        'title'		=> 'inplayquotes_postbit',
-        'template'	=> $db->escape_string('<a href="" onclick="$(\'#inplayquotes_{$pid}\').modal({ fadeDuration: 250, keepelement: true, zIndex: (typeof modal_zindex !== \'undefined\' ? modal_zindex : 9999) }); return false;" class="postbit_quote postbit_mirage"><span>{$lang->inplayquotes_postbit}</span></a>
-        <script>
-            // Funktion zum Speichern des markierten Textes und Einfügen in die Textarea
-            function saveSelectedText(event) {
-                if (window.getSelection().toString().length) {
-                    var postId = event.target.id.replace(\'pid_\', \'\');
-                    document.getElementById("quotebox" + postId).value = window.getSelection().toString();
-                }
-            }
-        
-            // Eventlistener für das Speichern des markierten Textes auf jedem Beitrag/Post im Thema
-            var posts = document.querySelectorAll(\'.post_body\');
-            posts.forEach(function(post) {
-                post.addEventListener(\'mouseup\', function(event) {
-                    saveSelectedText(event);
-                });
-            });
-        </script>
-        {$inplayquotes_popup}'),
-        'sid'		=> '-2',
-        'dateline'	=> TIME_NOW
-    );
-    $db->insert_query("templates", $insert_array);
-
-    $insert_array = array(
-        'title'		=> 'inplayquotes_postbit_popup',
-        'template'	=> $db->escape_string('<div id="inplayquotes_{$pid}" class="modal" style="display: none;">
-        <div class="inplayquotes_popup">
-            <div class="inplayquotes_popup-headline">{$lang->inplayquotes_postbit_popup}</div>
-            <div class="inplayquotes_popup-quoteInfo">
-                {$quote_infos}
-            </div>
-            <form id="new_inplayquotes" method="post" action="misc.php?action=add_inplayquote&pid={$pid}">
-                <div class="inplayquotes_popup-textarea">
-                    {$lang->inplayquotes_postbit_popup_quote}
-                    <textarea name="inplayquote" id="quotebox{$pid}" style="width: 300px; height: 100px;" maxlength="5000"></textarea>
-                </div>
-                <div class="inplayquotes_popup-button">
-                    <input type="hidden" name="sendby" value="{$active_uid}" />
-                    <input type="submit" name="inplayquotes_submit" id="inplayquotes_submit" value="{$lang->inplayquotes_postbit_popup_button}" class="button">
-                </div>
-            </form>
-        </div>
-    </div>'),
-        'sid'		=> '-2',
-        'dateline'	=> TIME_NOW
-    );
-    $db->insert_query("templates", $insert_array);
-
-    $insert_array = array(
-        'title'		=> 'inplayquotes_reactions',
-        'template'	=> $db->escape_string('<div class="inplayquotes_overview_bit_reaction">
-        <div class="inplayquotes_overview_bit_reaction_bit">
-            {$stored_reactions}
-            {$reactions_add}
-        </div>
-        {$reacted_reactions}
-        {$delete_reactions}
-    </div>'),
-        'sid'		=> '-2',
-        'dateline'	=> TIME_NOW
-    );
-    $db->insert_query("templates", $insert_array);
-
-    $insert_array = array(
-        'title'		=> 'inplayquotes_reactions_add',
-        'template'	=> $db->escape_string('<div class="inplayquotes_overview_bit_reaction">
-        <a href="" onclick="$(\'#inplayquotesReactions_{$qid}\').modal({ fadeDuration: 250, keepelement: true, zIndex: (typeof modal_zindex !== \'undefined\' ? modal_zindex : 9999) }); return false;" class="postbit_quote postbit_mirage"><span>{$lang->inplayquotes_reactions_add}</span></a>
-    </div>
-    {$reactions_popup}'),
-        'sid'		=> '-2',
-        'dateline'	=> TIME_NOW
-    );
-    $db->insert_query("templates", $insert_array);
-
-    $insert_array = array(
-        'title'		=> 'inplayquotes_reactions_add_popup',
-        'template'	=> $db->escape_string('<div id="inplayquotesReactions_{$qid}" class="modal" style="display: none;">
-        <div class="inplayquotes_popup">
-            <div class="inplayquotes_popup-headline">{$lang->inplayquotes_reactions_add}</div>
-            <div class="inplayquotes_popup-quoteInfo">
-                {$quote_preview}
-            </div>
-            <div class="inplayquotes_popup-subline">{$lang->inplayquotes_reactions_add_desc}</div>
-            <form id="new_inplayquotesReactions" method="post" action="misc.php?action=add_inplayquote_reaction">
-                <input type="hidden" name="sendby" value="{$active_uid}" />
-                <input type="hidden" name="selected_reaction_id" id="selected_reaction_id" /> 
-                <div class="inplayquotes_popup-reactions">
-                    {$reactions_images}
-                </div>
-            </form>
-        </div>
-    </div>
-    
-    <script>
-        function selectReaction(reactionId, qid) {
-            document.getElementById(\'selected_reaction_id\').value = reactionId;
-            document.getElementById(\'new_inplayquotesReactions\').setAttribute(\'action\', \'misc.php?action=add_inplayquote_reaction&qid=\' + qid);
-            document.getElementById(\'new_inplayquotesReactions\').submit();
-        }
-    </script>'),
-        'sid'		=> '-2',
-        'dateline'	=> TIME_NOW
-    );
-    $db->insert_query("templates", $insert_array);
-
-    $insert_array = array(
-        'title'		=> 'inplayquotes_reactions_add_popup_image',
-        'template'	=> $db->escape_string('<img src="{$mybb->settings[\'bburl\']}/{$image}" alt="" style="cursor: pointer;" onclick="selectReaction({$rsid}, {$qid})">
-        <script>
-            function selectReaction(reactionId) {
-                document.getElementById(\'selected_reaction_id\').value = reactionId;
-                document.getElementById(\'new_inplayquotesReactions\').submit();
-            }
-        </script>'),
-        'sid'		=> '-2',
-        'dateline'	=> TIME_NOW
-    );
-    $db->insert_query("templates", $insert_array);
-
-    $insert_array = array(
-        'title'		=> 'inplayquotes_reactions_reacted',
-        'template'	=> $db->escape_string('<div class="inplayquotes_overview_bit_reaction-reacted">
-        {$lang->inplayquotes_reactions_reacted}
-        {$reacted_images}
-    </div>'),
-        'sid'		=> '-2',
-        'dateline'	=> TIME_NOW
-    );
-    $db->insert_query("templates", $insert_array);
-
-    $insert_array = array(
-        'title'		=> 'inplayquotes_reactions_reacted_image',
-        'template'	=> $db->escape_string('<img src="{$image}"> <a href="misc.php?action=inplayquotes&reactions_delete={$reaction}&reactions_quote={$qid}">x</a>'),
-        'sid'		=> '-2',
-        'dateline'	=> TIME_NOW
-    );
-    $db->insert_query("templates", $insert_array);
-
-    $insert_array = array(
-        'title'		=> 'inplayquotes_reactions_stored',
-        'template'	=> $db->escape_string('<div class="inplayquotes_overview_bit_reaction_images">
-        <img src="{$mybb->settings[\'bburl\']}/{$image}" title="{$title}" /> <span>{$count}</span>
-    </div>'),
-        'sid'		=> '-2',
-        'dateline'	=> TIME_NOW
-    );
-    $db->insert_query("templates", $insert_array);
-
-    require_once MYBB_ADMIN_DIR."inc/functions_themes.php";
+    inplayquotes_templates();
 
     // STYLESHEET HINZUFÜGEN
-    $css = array(
-        'name' => 'inplayquotes.css',
-        'tid' => 1,
-        'attachedto' => '',
-        "stylesheet" => '.inplayquotes_popup {
-            background: #ffffff;
-            width: 100%;
-            margin: auto auto;
-            border: 1px solid #ccc;
-            padding: 1px;
-            -moz-border-radius: 7px;
-            -webkit-border-radius: 7px;
-            border-radius: 7px;
-        }
-        
-        .inplayquotes_popup-headline {
-            background: #0066a2 url(../../../images/thead.png) top left repeat-x;
-            color: #ffffff;
-            border-bottom: 1px solid #263c30;
-            padding: 8px;
-            -moz-border-radius-topleft: 6px;
-            -moz-border-radius-topright: 6px;
-            -webkit-border-top-left-radius: 6px;
-            -webkit-border-top-right-radius: 6px;
-            border-top-left-radius: 6px;
-            border-top-right-radius: 6px;
-        }
-        
-        .inplayquotes_popup-quoteInfo {
-            background: #f5f5f5;
-            border: 1px solid;
-            border-color: #fff #ddd #ddd #fff;
-            padding: 5px 0;
-        }
-        
-        .inplayquotes_popup-textarea {
-            background: #f5f5f5;
-            border: 1px solid;
-            border-color: #fff #ddd #ddd #fff;
-            text-align: center;
-            padding: 5px 0;
-        }
-        
-        .inplayquotes_popup-button {
-            border-top: 1px solid #fff;
-            padding: 6px;
-            background: #ddd;
-            color: #666;
-            -moz-border-radius-bottomleft: 6px;
-            -webkit-border-bottom-left-radius: 6px;
-            border-bottom-left-radius: 6px;
-            -moz-border-radius-bottomright: 6px;
-            -webkit-border-bottom-right-radius: 6px;
-            border-bottom-right-radius: 6px;
-            border-bottom: 0;
-            text-align: center;
-        }
-        
-        #inplayquotes_overview {
-            box-sizing: border-box;
-            background: #fff;
-            border: 1px solid #ccc;
-            padding: 1px;
-            -moz-border-radius: 7px;
-            -webkit-border-radius: 7px;
-            border-radius: 7px;
-        }
-        
-        .inplayquotes-headline {
-            height: 50px;
-            width: 100%;
-            font-size: 30px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-weight: bold;
-            text-transform: uppercase;
-            background: #0066a2 url(../../../images/thead.png) top left repeat-x;
-            color: #ffffff;
-            -moz-border-radius-topleft: 6px;
-            -moz-border-radius-topright: 6px;
-            -webkit-border-top-left-radius: 6px;
-            -webkit-border-top-right-radius: 6px;
-            border-top-left-radius: 6px;
-            border-top-right-radius: 6px;
-        }
-        
-        .inplayquotes-filter {
-            background: #f5f5f5;
-        }
-        
-        .inplayquotes-filter-headline {
-            background: #0f0f0f url(../../../images/tcat.png) repeat-x;
-            color: #fff;
-            border-top: 1px solid #444;
-            border-bottom: 1px solid #000;
-            padding: 6px;
-            font-size: 12px;
-        }
-        
-        .inplayquotes-filteroptions {
-            display: flex;
-            justify-content: space-around;
-            width: 90%;
-            margin: 10px auto;
-            gap: 5px;
-        }
-        
-        .inplayquotes_overview_filter_bit {
-            width: 100%;
-            text-align: center;
-        }
-        
-        .inplayquotes-filter-bit-headline {
-            padding: 6px;
-            background: #ddd;
-            color: #666;
-        }
-        
-        .inplayquotes-filter-bit-dropbox {
-            margin: 5px;
-        }
-        
-        .inplayquotes-body {
-            background: #f5f5f5;
-            padding: 20px 40px;
-            text-align: justify;
-            line-height: 180%;
-            -moz-border-radius-bottomright: 6px;
-            -webkit-border-bottom-right-radius: 6px;
-            border-bottom-right-radius: 6px;
-            -moz-border-radius-bottomleft: 6px;
-            -webkit-border-bottom-left-radius: 6px;
-            border-bottom-left-radius: 6px;
-        }
-        
-        .inplayquotes_overview_bit {
-            width: 100%;
-            display: flex;
-            margin: 20px 0;
-            flex-wrap: nowrap;
-            align-items: center;
-        }
-        
-        .inplayquotes_overview_bit:nth-child(even) {
-            flex-direction: row-reverse;
-        }
-        
-        .inplayquotes_overview_bit_avatar {
-            width: 10%;
-            text-align: center;
-        }
-        
-        .inplayquotes_overview_bit_avatar img {
-            border-radius: 100%;
-            border: 2px solid #0071bd;
-            width: 100px;
-        }
-        
-        .inplayquotes_overview_bit_container {
-            width: 90%;
-        }
-        
-        .inplayquotes_overview_bit_quote {
-            width: 95%;
-            margin: auto;
-            font-size: 15px;
-            text-align: justify;
-            margin-bottom: 10px;
-        }
-        
-        .inplayquotes_overview_bit_footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .inplayquotes_overview_bit_reaction a:link,
-        .inplayquotes_overview_bit_reaction a:active,
-        .inplayquotes_overview_bit_reaction a:visited,
-        .inplayquotes_overview_bit_reaction a:hover{
-            background:#ddd;
-            border-radius: 0;
-            color: #666;
-            font-size: 9px;
-            text-transform: uppercase;
-            padding: 7px 5px;
-        } 
-        
-        .inplayquotes_popup-quotepreview {
-            background: #f5f5f5;
-            border: 1px solid;
-            border-color: #fff #ddd #ddd #fff;
-            padding: 5px 0;
-        }
-        
-        .inplayquotes_popup-subline {
-            background: #0f0f0f url(../../../images/tcat.png) repeat-x;
-            color: #fff;
-            border-top: 1px solid #444;
-            border-bottom: 1px solid #000;
-            padding: 6px;
-            font-size: 12px;
-        }
-        
-        .inplayquotes_popup-reactions {
-            background: #f5f5f5;
-            border: 1px solid;
-            border-color: #fff #ddd #ddd #fff;
-            text-align: center;
-            padding: 5px 0;
-            -moz-border-radius-bottomright: 6px;
-            -webkit-border-bottom-right-radius: 6px;
-            border-bottom-right-radius: 6px;
-            -moz-border-radius-bottomleft: 6px;
-            -webkit-border-bottom-left-radius: 6px;
-            border-bottom-left-radius: 6px;
-        }
-        
-        .inplayquotes_popup-reactions img {
-            width: 24px;
-            height: 24px;
-            padding: 5px;
-            cursor: pointer;
-        }
-        
-        .inplayquotes_overview_bit_reaction_bit {
-            display: flex; 
-            gap: 5px;
-        }
-        
-        .inplayquotes_overview_bit_reaction-reacted {
-            margin-top: 5px;
-        }
-        
-        .inplayquotes_overview_bit_reaction-reacted img {
-            width: 16px;
-            height: 16px;
-        }
-        
-        .inplayquotes_overview_bit_reaction-reacted a:link,
-        .inplayquotes_overview_bit_reaction-reacted a:active,
-        .inplayquotes_overview_bit_reaction-reacted a:visited,
-        .inplayquotes_overview_bit_reaction-reacted a:hover{
-                background: none;
-                color: #0072BC;
-                font-size: 10px;
-                text-transform: none;
-                padding: 0;
-        }
-        
-        .inplayquotes_overview_bit_reaction_images {
-            background: #ddd;
-            border-radius: 0;
-            color: #666;
-            font-size: 9px;
-            text-transform: uppercase;
-            padding: 0 5px;
-            display: flex;
-            flex-wrap: nowrap;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-        }
-        
-        .inplayquotes_overview_bit_reaction_images img {
-            width: 16px;
-            height: 16px;
-        }
-        
-        .inplayquotes_overview_bit_reactions_delete a:link, 
-        .inplayquotes_overview_bit_reactions_delete a:active, 
-        .inplayquotes_overview_bit_reactions_delete a:visited, 
-        .inplayquotes_overview_bit_reactions_deletea:hover {
-            background: none;
-            border-radius: 0;
-            color: #0072BC;
-            font-size: 9px;
-            text-transform: uppercase;
-            padding: 0;
-        }
-        
-        .inplayquotes_overview_bit_user {
-            text-align: right;
-            line-height: 15px;
-        }
-        
-        .inplayquotes_overview_bit_user b {
-            text-transform: uppercase;
-        }
-        
-        .inplayquotes_overview_bit_user span {
-            font-style: italic;
-            font-size: 11px;
-        }
-        
-        .inplayquotes_index {
-            background: #fff;
-            width: 100%;
-            margin: auto auto;
-            border: 1px solid #ccc;
-            padding: 1px;
-            -moz-border-radius: 7px;
-            -webkit-border-radius: 7px;
-            border-radius: 7px;
-        }
-        
-        .inplayquotes_index-headline {
-            background: #0066a2 url(../../../images/thead.png) top left repeat-x;
-            color: #ffffff;
-            border-bottom: 1px solid #263c30;
-            padding: 8px;
-            -moz-border-radius-topleft: 6px;
-            -moz-border-radius-topright: 6px;
-            -webkit-border-top-left-radius: 6px;
-            -webkit-border-top-right-radius: 6px;
-            border-top-left-radius: 6px;
-            border-top-right-radius: 6px;
-        }
-        
-        .inplayquotes_index-allquotes {
-            border-top: 1px solid #fff;
-            padding: 6px;
-            background: #ddd;
-            color: #666;
-            text-align: right;
-            -moz-border-radius-bottomright: 6px;
-            -webkit-border-bottom-right-radius: 6px;
-            border-bottom-right-radius: 6px;
-            -moz-border-radius-bottomleft: 6px;
-            -webkit-border-bottom-left-radius: 6px;
-            border-bottom-left-radius: 6px;
-        }
-        
-        .inplayquotes_index_bit {
-            background: #f5f5f5;
-            border: 1px solid;
-            border-color: #fff #ddd #ddd #fff;
-            padding: 5px 10px;
-            display: flex;
-            flex-wrap: nowrap;
-            align-items: center;
-        }
-        
-        .inplayquotes_index_bit_avatar {
-            width: 10%;
-            text-align: center;
-        }
-        
-        .inplayquotes_index_bit_avatar img {
-            border-radius: 100%;
-            border: 2px solid #0071bd;
-            width: 100px;
-        }
-        
-        .inplayquotes_index_bit_container {
-            width: 90%;
-        }
-        
-        .inplayquotes_index_bit_quote {
-            width: 95%;
-            margin: auto;
-            font-size: 15px;
-            text-align: justify;
-            margin-bottom: 10px;
-        }
-        
-        .inplayquotes_index_bit_footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .inplayquotes_index_bit_user {
-            text-align: right;
-            line-height: 15px;
-        }
-        
-        .inplayquotes_index_bit_user b {
-            text-transform: uppercase;
-        }
-        
-        .inplayquotes_index_bit_user span {
-            font-style: italic;
-            font-size: 11px;
-        }
-        
-        .inplayquotes_memberprofile {
-            background: #fff;
-            margin: auto auto;
-            border: 1px solid #ccc;
-            padding: 1px;
-            -moz-border-radius: 7px;
-            -webkit-border-radius: 7px;
-            border-radius: 7px;
-        }
-        
-        .inplayquotes_memberprofile-headline {
-            background: #0066a2 url(../../../images/thead.png) top left repeat-x;
-            color: #ffffff;
-            border-bottom: 1px solid #263c30;
-            padding: 8px;
-            -moz-border-radius-topleft: 6px;
-            -moz-border-radius-topright: 6px;
-            -webkit-border-top-left-radius: 6px;
-            -webkit-border-top-right-radius: 6px;
-            border-top-left-radius: 6px;
-            border-top-right-radius: 6px;
-        }
-        
-        .inplayquotes_memberprofile-allquotes {
-            border-top: 1px solid #fff;
-            padding: 6px;
-            background: #ddd;
-            color: #666;
-            text-align: right;
-            -moz-border-radius-bottomright: 6px;
-            -webkit-border-bottom-right-radius: 6px;
-            border-bottom-right-radius: 6px;
-            -moz-border-radius-bottomleft: 6px;
-            -webkit-border-bottom-left-radius: 6px;
-            border-bottom-left-radius: 6px;
-        }
-        .inplayquotes_memberprofile_bit {
-            background: #f5f5f5;
-            border: 1px solid;
-            border-color: #fff #ddd #ddd #fff;
-            padding: 5px 10px;
-        }
-        
-        .inplayquotes_memberprofile_bit_quote {
-            width: 95%;
-            margin: auto;
-            font-size: 15px;
-            text-align: justify;
-            margin-bottom: 10px;
-        }
-        
-        .inplayquotes_memberprofile_bit_footer {
-            text-align: right;
-            line-height: 15px;
-        }
-        
-        .inplayquotes_memberprofile_bit_footer span {
-            text-transform: uppercase;
-            font-style: italic;
-            font-size: 11px;
-        }',
-        'cachefile' => $db->escape_string(str_replace('/', '', 'inplayquotes.css')),
-        'lastmodified' => time()
-    );
-    
+	require_once MYBB_ADMIN_DIR."inc/functions_themes.php";
+    // Funktion
+    $css = inplayquotes_stylesheet();
     $sid = $db->insert_query("themestylesheets", $css);
-    $db->update_query("themestylesheets", array("cachefile" => "inplayquotes.css"), "sid = '".$sid."'", 1);
+	$db->update_query("themestylesheets", array("cachefile" => "inplayquotes.css"), "sid = '".$sid."'", 1);
 
-    $tids = $db->simple_select("themes", "tid");
-    while($theme = $db->fetch_array($tids)) {
-        update_theme_stylesheet_list($theme['tid']);
-    }
+	$tids = $db->simple_select("themes", "tid");
+	while($theme = $db->fetch_array($tids)) {
+		update_theme_stylesheet_list($theme['tid']);
+	}
 
     // Übertragung von den Daten von Jules Inplayzitaten
     if ($db->table_exists("inplayquotes_jule")) {
@@ -1291,12 +300,12 @@ function inplayquotes_settings_peek(&$peekers){
 
 // ADMIN-CP VERWALTUNG
 // action handler fürs acp konfigurieren
-function inplayquotes_admin_config_action_handler(&$actions) {
+function inplayquotes_admin_rpgstuff_action_handler(&$actions) {
 	$actions['inplayquotes'] = array('active' => 'inplayquotes', 'file' => 'inplayquotes');
 }
 
 // Berechtigungen im ACP - Adminrechte
-function inplayquotes_admin_config_permissions(&$admin_permissions) {
+function inplayquotes_admin_rpgstuff_permissions(&$admin_permissions) {
 	global $lang;
 	
     $lang->load('inplayquotes');
@@ -1307,7 +316,7 @@ function inplayquotes_admin_config_permissions(&$admin_permissions) {
 }
 
 // Menü einfügen
-function inplayquotes_admin_config_menu(&$sub_menu) {
+function inplayquotes_admin_rpgstuff_menu(&$sub_menu) {
 	global $mybb, $lang;
 	
     $lang->load('inplayquotes');
@@ -1315,7 +324,7 @@ function inplayquotes_admin_config_menu(&$sub_menu) {
 	$sub_menu[] = [
 		"id" => "inplayquotes",
 		"title" => $lang->inplayquotes_manage,
-		"link" => "index.php?module=config-inplayquotes"
+		"link" => "index.php?module=rpgstuff-inplayquotes"
 	];
 }
 
@@ -1331,9 +340,9 @@ function inplayquotes_admin_manage() {
 	}
 
 	// Add to page navigation
-	$page->add_breadcrumb_item($lang->inplayquotes_manage, "index.php?module=config-inplayquotes");
+	$page->add_breadcrumb_item($lang->inplayquotes_manage, "index.php?module=rpgstuff-inplayquotes");
 
-	if ($run_module == 'config' && $action_file == 'inplayquotes') {
+	if ($run_module == 'rpgstuff' && $action_file == 'inplayquotes') {
 
 		// ÜBERSICHT
 		if ($mybb->get_input('action') == "" || !$mybb->get_input('action')) {
@@ -1344,13 +353,13 @@ function inplayquotes_admin_manage() {
 			// Übersichtsseite Button
 			$sub_tabs['inplayquotes_overview'] = [
 				"title" => $lang->inplayquotes_overview,
-				"link" => "index.php?module=config-inplayquotes",
+				"link" => "index.php?module=rpgstuff-inplayquotes",
 				"description" => $lang->inplayquotes_overview_desc
 			];
 			// Hinzufüge Button
 			$sub_tabs['inplayquotes_add'] = [
 				"title" => $lang->inplayquotes_add,
-				"link" => "index.php?module=config-inplayquotes&amp;action=add",
+				"link" => "index.php?module=rpgstuff-inplayquotes&amp;action=add",
 				"description" => $lang->inplayquotes_add_desc
 			];
 
@@ -1384,7 +393,7 @@ function inplayquotes_admin_manage() {
 				$page->output_inline_error($errors);
 			}
 
-			$form = new Form("index.php?module=config-inplayquotes", "post", "", 1);
+			$form = new Form("index.php?module=rpgstuff-inplayquotes", "post", "", 1);
 			$form_container = new FormContainer($lang->inplayquotes_overview);
 			$form_container->output_row_header($lang->inplayquotes_overview_image, array("class" => "align_center", "width" => 1));
 			$form_container->output_row_header($lang->inplayquotes_overview_name, array("width" => "35%"));
@@ -1401,8 +410,8 @@ function inplayquotes_admin_manage() {
                 $image = "<img src=\"../".$elements['image']."\" alt=\"\" width=\"32\" height=\"32\">";
                 $form_container->output_cell($image, array("class" => "align_center", "width" => "20%"));
                 $form_container->output_cell(htmlspecialchars_uni($elements['name']), array("width" => "60%"));
-                $form_container->output_cell("<a href=\"index.php?module=config-inplayquotes&amp;action=edit&amp;rsid=".$elements['rsid']."\">{$lang->inplayquotes_overview_option_edit}</a>", array("class" => "align_center", "width" => "10%"));
-                $form_container->output_cell("<a href=\"index.php?module=config-inplayquotes&amp;action=delete&amp;rsid=".$elements['rsid']."&amp;my_post_key={$mybb->post_code}\" onclick=\"return AdminCP.deleteConfirmation(this, '{$lang->inplayquotes_overview_option_delete_notice}')\">{$lang->inplayquotes_overview_option_delete}</a>", array("class" => "align_center", "width" => "10%"));
+                $form_container->output_cell("<a href=\"index.php?module=rpgstuff-inplayquotes&amp;action=edit&amp;rsid=".$elements['rsid']."\">{$lang->inplayquotes_overview_option_edit}</a>", array("class" => "align_center", "width" => "10%"));
+                $form_container->output_cell("<a href=\"index.php?module=rpgstuff-inplayquotes&amp;action=delete&amp;rsid=".$elements['rsid']."&amp;my_post_key={$mybb->post_code}\" onclick=\"return AdminCP.deleteConfirmation(this, '{$lang->inplayquotes_overview_option_delete_notice}')\">{$lang->inplayquotes_overview_option_delete}</a>", array("class" => "align_center", "width" => "10%"));
                 $form_container->construct_row();
             }
 
@@ -1415,7 +424,7 @@ function inplayquotes_admin_manage() {
             $form->end();
             // Multipage
             $search_url = htmlspecialchars_uni(
-                "index.php?module=config-inplayquotes&amp;".$mybb->get_input('perpage')
+                "index.php?module=rpgstuff-inplayquotes&amp;".$mybb->get_input('perpage')
             );
             $multipage = multipage($reactions_count, $perpage, $pageview, $search_url);
             echo $multipage;
@@ -1454,7 +463,7 @@ function inplayquotes_admin_manage() {
                     log_admin_action(htmlspecialchars_uni($mybb->input['name']));
     
                     flash_message($lang->inplayquotes_add_flash, 'success');
-                    admin_redirect("index.php?module=config-inplayquotes");
+                    admin_redirect("index.php?module=rpgstuff-inplayquotes");
                 }
             }
     
@@ -1489,13 +498,13 @@ function inplayquotes_admin_manage() {
 			// Übersichtsseite Button
 			$sub_tabs['inplayquotes_overview'] = [
 				"title" => $lang->inplayquotes_overview,
-				"link" => "index.php?module=config-inplayquotes",
+				"link" => "index.php?module=rpgstuff-inplayquotes",
 				"description" => $lang->inplayquotes_overview_desc
 			];
 			// Hinzufüge Button
 			$sub_tabs['inplayquotes_add'] = [
 				"title" => $lang->inplayquotes_add,
-				"link" => "index.php?module=config-inplayquotes&amp;action=add",
+				"link" => "index.php?module=rpgstuff-inplayquotes&amp;action=add",
 				"description" => $lang->inplayquotes_add_desc
 			];
     
@@ -1509,7 +518,7 @@ function inplayquotes_admin_manage() {
             }
     
             // Build the form
-            $form = new Form("index.php?module=config-inplayquotes&amp;action=add", "post", "", 1);
+            $form = new Form("index.php?module=rpgstuff-inplayquotes&amp;action=add", "post", "", 1);
             $form_container = new FormContainer($lang->inplayquotes_add);
     
             // Name
@@ -1573,7 +582,7 @@ function inplayquotes_admin_manage() {
                     log_admin_action(htmlspecialchars_uni($mybb->input['name']));
     
                     flash_message($lang->inplayquotes_edit_flash, 'success');
-                    admin_redirect("index.php?module=config-inplayquotes");
+                    admin_redirect("index.php?module=rpgstuff-inplayquotes");
                 }
             }
     
@@ -1608,13 +617,13 @@ function inplayquotes_admin_manage() {
 			// Übersichtsseite Button
 			$sub_tabs['inplayquotes_overview'] = [
 				"title" => $lang->inplayquotes_overview,
-				"link" => "index.php?module=config-inplayquotes",
+				"link" => "index.php?module=rpgstuff-inplayquotes",
 				"description" => $lang->inplayquotes_overview_desc
 			];
 			// Hinzufüge Button
 			$sub_tabs['inplayquotes_edit'] = [
 				"title" => $lang->inplayquotes_edit,
-				"link" => "index.php?module=config-inplayquotes&action=edit&rsid=".$rsid,
+				"link" => "index.php?module=rpgstuff-inplayquotes&action=edit&rsid=".$rsid,
 				"description" => $lang->inplayquotes_edit_desc
 			];
     
@@ -1626,7 +635,7 @@ function inplayquotes_admin_manage() {
             }
     
             // Build the form
-            $form = new Form("index.php?module=config-inplayquotes&amp;action=edit&rsid=".$rsid, "post", "", 1);
+            $form = new Form("index.php?module=rpgstuff-inplayquotes&amp;action=edit&rsid=".$rsid, "post", "", 1);
             $form_container = new FormContainer($lang->inplayquotes_add);
             echo $form->generate_hidden_field('rsid', $rsid);
     
@@ -1664,12 +673,12 @@ function inplayquotes_admin_manage() {
 			// Error Handling
 			if (empty($rsid)) {
 				flash_message($lang->inplayquotes_delete_error_invalid, 'error');
-				admin_redirect("index.php?module=config-inplayquotes");
+				admin_redirect("index.php?module=rpgstuff-inplayquotes");
 			}
 
 			// Cancel button pressed?
 			if (isset($mybb->input['no']) && $mybb->input['no']) {
-				admin_redirect("index.php?module=config-inplayquotes");
+				admin_redirect("index.php?module=rpgstuff-inplayquotes");
 			}
 
 			if ($mybb->request_method == "post") {
@@ -1686,10 +695,10 @@ function inplayquotes_admin_manage() {
                 log_admin_action(htmlspecialchars_uni($del_type['name']));
 
                 flash_message($lang->sprintf($lang->inplayquotes_delete_flash, $del_type['name']), 'success');
-                admin_redirect("index.php?module=config-inplayquotes");
+                admin_redirect("index.php?module=rpgstuff-inplayquotes");
 			} else {
 				$page->output_confirm_action(
-					"index.php?module=config-inplayquotes&amp;action=delete&amp;rsid=".$rsid,
+					"index.php?module=rpgstuff-inplayquotes&amp;action=delete&amp;rsid=".$rsid,
 					$lang->uploadsystem_manage_overview_delete_notice
 				);
 			}
@@ -1698,6 +707,136 @@ function inplayquotes_admin_manage() {
 
     }
 
+}
+
+// Stylesheet zum Master Style hinzufügen
+function inplayquotes_admin_update_stylesheet(&$table) {
+
+    global $db, $mybb, $lang;
+	
+    $lang->load('rpgstuff_stylesheet_updates');
+
+    require_once MYBB_ADMIN_DIR."inc/functions_themes.php";
+
+    // HINZUFÜGEN
+    if ($mybb->input['action'] == 'add_master' AND $mybb->get_input('plugin') == "inplayquotes") {
+
+        $css = inplayquotes_stylesheet();
+        
+        $sid = $db->insert_query("themestylesheets", $css);
+        $db->update_query("themestylesheets", array("cachefile" => "inplayquotes.css"), "sid = '".$sid."'", 1);
+    
+        $tids = $db->simple_select("themes", "tid");
+        while($theme = $db->fetch_array($tids)) {
+            update_theme_stylesheet_list($theme['tid']);
+        } 
+
+        flash_message($lang->stylesheets_flash, "success");
+        admin_redirect("index.php?module=rpgstuff-stylesheet_updates");
+    }
+
+    // Zelle mit dem Namen des Themes
+    $table->construct_cell("<b>".htmlspecialchars_uni("Inplayzitate")."</b>", array('width' => '70%'));
+
+    // Ob im Master Style vorhanden
+    $master_check = $db->fetch_field($db->query("SELECT tid FROM ".TABLE_PREFIX."themestylesheets 
+    WHERE name = 'inplayquotes.css' 
+    AND tid = 1
+    "), "tid");
+    
+    if (!empty($master_check)) {
+        $masterstyle = true;
+    } else {
+        $masterstyle = false;
+    }
+
+    if (!empty($masterstyle)) {
+        $table->construct_cell($lang->stylesheets_masterstyle, array('class' => 'align_center'));
+    } else {
+        $table->construct_cell("<a href=\"index.php?module=rpgstuff-stylesheet_updates&action=add_master&plugin=inplayquotes\">".$lang->stylesheets_add."</a>", array('class' => 'align_center'));
+    }
+    
+    $table->construct_row();
+}
+
+// Plugin Update
+function inplayquotes_admin_update_plugin(&$table) {
+
+    global $db, $mybb, $lang;
+	
+    $lang->load('rpgstuff_plugin_updates');
+
+    // UPDATE
+    if ($mybb->input['action'] == 'add_update' AND $mybb->get_input('plugin') == "inplayquotes") {
+
+        // Einstellungen überprüfen => Type = update
+        inplayquotes_settings('update');
+        rebuild_settings();
+
+        // Templates 
+        inplayquotes_templates('update');
+
+        // Stylesheet
+        $update_data = inplayquotes_stylesheet_update();
+        $update_stylesheet = $update_data['stylesheet'];
+        $update_string = $update_data['update_string'];
+        if (!empty($update_string)) {
+
+            // Ob im Master Style die Überprüfung vorhanden ist
+            $masterstylesheet = $db->fetch_field($db->query("SELECT stylesheet FROM ".TABLE_PREFIX."themestylesheets WHERE tid = 1 AND name = 'inplayquotes.css'"), "stylesheet");
+            $pos = strpos($masterstylesheet, $update_string);
+            if ($pos === false) { // nicht vorhanden 
+            
+                $theme_query = $db->simple_select('themes', 'tid, name');
+                while ($theme = $db->fetch_array($theme_query)) {
+        
+                    $stylesheet_query = $db->simple_select("themestylesheets", "*", "name='".$db->escape_string('inplayquotes.css')."' AND tid = ".$theme['tid']);
+                    $stylesheet = $db->fetch_array($stylesheet_query);
+        
+                    if ($stylesheet) {
+
+                        require_once MYBB_ADMIN_DIR."inc/functions_themes.php";
+        
+                        $sid = $stylesheet['sid'];
+            
+                        $updated_stylesheet = array(
+                            "cachefile" => $db->escape_string($stylesheet['name']),
+                            "stylesheet" => $db->escape_string($stylesheet['stylesheet']."\n\n".$update_stylesheet),
+                            "lastmodified" => TIME_NOW
+                        );
+            
+                        $db->update_query("themestylesheets", $updated_stylesheet, "sid='".$sid."'");
+            
+                        if(!cache_stylesheet($theme['tid'], $stylesheet['name'], $updated_stylesheet['stylesheet'])) {
+                            $db->update_query("themestylesheets", array('cachefile' => "css.php?stylesheet=".$sid), "sid='".$sid."'", 1);
+                        }
+            
+                        update_theme_stylesheet_list($theme['tid']);
+                    }
+                }
+            } 
+        }
+
+        // Datenbanktabellen & Felder
+        inplayquotes_database();
+
+        flash_message($lang->plugins_flash, "success");
+        admin_redirect("index.php?module=rpgstuff-plugin_updates");
+    }
+
+    // Zelle mit dem Namen des Themes
+    $table->construct_cell("<b>".htmlspecialchars_uni("Inplayzitate")."</b>", array('width' => '70%'));
+
+    // Überprüfen, ob Update erledigt
+    $update_check = inplayquotes_is_updated();
+
+    if (!empty($update_check)) {
+        $table->construct_cell($lang->plugins_actual, array('class' => 'align_center'));
+    } else {
+        $table->construct_cell("<a href=\"index.php?module=rpgstuff-plugin_updates&action=add_update&plugin=inplayquotes\">".$lang->plugins_update."</a>", array('class' => 'align_center'));
+    }
+    
+    $table->construct_row();
 }
 
 // USER WIRD GELÖSCHT
@@ -2441,7 +1580,7 @@ function inplayquotes_misc() {
 
             // Lösch Link
             if(($mybb->usergroup['canmodcp'] == '1' OR $pos !== false) AND $active_uid != 0){
-                $del_quote = "<a href=\"misc.php?action=inplayquotes&quote_delete=".$qid."\">".$lang->inplayquotes_quote_delete."</a>";
+                $del_quote = "<a href=\"misc.php?action=inplayquotes&quote_delete=".$qid."\" onClick=\"return confirm('Möchtest du dieses Zitat wirklich löschen?');\">".$lang->inplayquotes_quote_delete."</a>";
             } else {
                 $del_quote = "";
             }
@@ -3043,7 +2182,7 @@ function inplayquotes_index() {
 
         // Lösch Link
         if(($mybb->usergroup['canmodcp'] == '1' OR $pos !== false) AND $active_uid != 0){
-            $del_quote = "<a href=\"misc.php?action=inplayquotes&quote_delete=".$qid."\">".$lang->inplayquotes_quote_delete."</a>";
+            $del_quote = "<a href=\"misc.php?action=inplayquotes&quote_delete=".$qid."\" onClick=\"return confirm('Möchtest du dieses Zitat wirklich löschen?');\">".$lang->inplayquotes_quote_delete."</a>";
         } else {
             $del_quote = "";
         }
@@ -3456,7 +2595,7 @@ function inplayquotes_build_characterfield($uid){
 // Variabel Bau Funktion - danke Katja <3
 function inplayquotes_build_scenefield($tid){
 
-    global $db, $mybb;
+    global $db, $mybb, $lang;
 
     // welches System
 	$inplaytrackersystem = $mybb->settings['inplayquotes_inplaytracker'];
@@ -3588,7 +2727,58 @@ function inplayquotes_build_scenefield($tid){
     // Inplaytracker von little.evil.genius 4
     else if ($inplaytrackersystem == 4) {
         //erst einmal alle Szenenfelder bekommen
-        $scene_fields = ["partners", "date", "time", "location", "trigger_warning", "shortdesc", "openscene", "postorder"];
+        $scene_fields = ["partners", "partners_username", "date", "trigger_warning", "scenetype", "postorder"];
+
+        $fields_query = $db->query("SELECT identification FROM ".TABLE_PREFIX."inplayscenes_fields");
+        while ($field = $db->fetch_array($fields_query)) {
+            $scene_fields[] = $db->escape_string($field['identification']);
+        }
+
+        // Sprachdatei laden
+        $lang->load('inplayscenes');
+
+        $scenetype_setting = $mybb->settings['inplayscenes_scenetype'];
+        $month_setting = $mybb->settings['inplayscenes_months'];
+        $color_setting = $mybb->settings['inplayscenes_groupcolor'];
+        $hide_setting = $mybb->settings['inplayscenes_hide'];
+    
+        $postorderoptions = [
+            '1' => $lang->inplayscenes_postorder_fixed,
+            '0' => $lang->inplayscenes_postorder_none
+        ];
+    
+        if ($scenetype_setting == 1) {
+            $sceneoptions = [
+                '0' => $lang->inplayscenes_scenetype_private,
+                '1' => $lang->inplayscenes_scenetype_agreed,
+                '2' => $lang->inplayscenes_scenetype_open
+            ];
+            if ($hide_setting == 1) {
+                array_push($sceneoptions, $lang->inplayscenes_scenetype_hide);
+            }
+        } else {
+            if ($hide_setting == 1) {
+                $sceneoptions = [
+                    '0' => '',
+                    '3' => $lang->inplayscenes_scenetype_hide
+                ];
+            }
+        }
+
+        $months = array(
+            '01' => $lang->inplayscenes_jan,
+            '02' => $lang->inplayscenes_feb,
+            '03' => $lang->inplayscenes_mar,
+            '04' => $lang->inplayscenes_apr,
+            '05' => $lang->inplayscenes_mai,
+            '06' => $lang->inplayscenes_jun,
+            '07' => $lang->inplayscenes_jul,
+            '08' => $lang->inplayscenes_aug,
+            '09' => $lang->inplayscenes_sep,
+            '10' => $lang->inplayscenes_okt,
+            '11' => $lang->inplayscenes_nov,
+            '12' => $lang->inplayscenes_dez
+        );
 
         foreach ($scene_fields as $field) {
 
@@ -3596,37 +2786,62 @@ function inplayquotes_build_scenefield($tid){
             $fieldvalue = $db->fetch_field($db->simple_select("inplayscenes", $field, "tid = '".$tid."'"), $field);
 
             if ($field == "date") {
-                $fieldvalue = date("d.m.Y", strtotime($fieldvalue));
-            }
-
-            if ($field == "partners") {
-                $partners = explode(",", $fieldvalue);
-                $partnerusers = array();
-                foreach ($partners as $partner) { 
-                    $charakter = get_user($partner);
-                    $taguser = build_profile_link($charakter['username'], $partner);
-                    $partnerusers[] = $taguser;
+                list($year, $month, $day) = explode('-', $fieldvalue);
+                if ($month_setting == 0) {
+                    $fieldvalue = $day.".".$month.".".$year;
+                } else {
+                    $fieldvalue = $day.". ".$months[$month]." ".$year;
                 }
-
-                $fieldvalue = implode(" &raquo; ", $partnerusers);
             }
 
-            if ($field == "openscene") {
-                if ($fieldvalue == 0) {
-                    $fieldvalue = "Private Szene";
-                } else if ($fieldvalue == 0) {
-                    $fieldvalue = "Halb-Offene Szene";
-                } else if ($fieldvalue == 1) {
-                    $fieldvalue = "Offene Szene";
+            if ($field == "partners" || $field == "partners_username") {
+
+                if ($field == "partners") {
+                    $partners_username = $db->fetch_field($db->simple_select("inplayscenes", 'partners_username', "tid = '".$tid."'"), 'partners_username');
+                    $partners = $fieldvalue;
+                } else if ($field == "partners_username") {
+                    $partners_username = $fieldvalue;
+                    $partners = $db->fetch_field($db->simple_select("inplayscenes", 'partners', "tid = '".$tid."'"), 'partners');
+                }
+            
+                $usernames = explode(",", $partners_username);
+                $uids = explode(",", $partners);
+            
+                $partners = [];
+                foreach ($uids as $key => $uid) {
+            
+                    $tagged_user = get_user($uid);
+                    if (!empty($tagged_user)) {
+                        if ($color_setting == 1) {
+                            $username = format_name($tagged_user['username'], $tagged_user['usergroup'], $tagged_user['displaygroup']);
+                        } else {
+                            $username = $tagged_user['username'];
+                        }
+                        $taguser = build_profile_link($username, $uid);
+                    } else {
+                        $taguser = $usernames[$key];
+                    }
+                    $partners[] = $taguser;
+                }
+                $fieldvalue = implode(" &raquo; ", $partners);
+            }
+
+            if ($field == "scenetype") {
+                if ($scenetype_setting == 1) {
+                    $fieldvalue = $sceneoptions[$fieldvalue];
+                    
+                    if ($hide_setting == 0 && $fieldvalue == 3) {
+                        $fieldvalue = $sceneoptions[0];
+                    }
+                } else if ($hide_setting == 1) {
+                    $fieldvalue = $sceneoptions[$fieldvalue];
+                } else {
+                    $fieldvalue = "";
                 }
             }
 
             if ($field == "postorder") {
-                if ($fieldvalue == 1) {
-                    $fieldvalue = "Feste Postingreihenfolge";
-                } else if ($fieldvalue == 0) {
-                    $fieldvalue = "Keine Reihenfolge";
-                }
+                $fieldvalue = $postorderoptions[$fieldvalue];
             }
 
             // {$scenefield['fidX']}  
@@ -3634,7 +2849,7 @@ function inplayquotes_build_scenefield($tid){
             $array[$arraylabel] = $fieldvalue;
         }
     }
-    // Inplaytracker von Ales 5
+    // Inplaytracker von Ales 1.0 5
     else if ($inplaytrackersystem == 5) {
         //erst einmal alle Szenenfelder bekommen
         $scene_fields = ["spieler", "date", "ort", "ip_time"];
@@ -3665,6 +2880,43 @@ function inplayquotes_build_scenefield($tid){
             $array[$arraylabel] = $fieldvalue;
         }
     }
+    // Inplaytracker von Ales 2.0 6
+    else if ($inplaytrackersystem == 6) {
+        //erst einmal alle Szenenfelder bekommen
+        $scene_fields = ["charas", "date", "time", "place"];
+
+        foreach ($scene_fields as $field) {
+
+            // Inhalt vom Feld
+            $fieldvalue = $db->fetch_field($db->simple_select("threads", $field, "tid = '".$tid."'"), $field);
+
+            if ($field == "date") {
+                $fieldvalue = date("d.m.Y", strtotime($fieldvalue));
+            }
+
+            if ($field == "charas") {
+                $partners = explode(",", $fieldvalue);
+                $partnerusers = array();
+                foreach ($partners as $partner) { 
+                    $chara_query = $db->simple_select("users", "*", "username ='".$db->escape_string($partner)."'");
+                    $charaktername = $db->fetch_array($chara_query);
+
+                    if (!empty($charaktername)) {
+                        $username = format_name($charaktername['username'], $charaktername['usergroup'], $charaktername['displaygroup']);
+                        $partnerusers[] = build_profile_link($username, $charaktername['uid']);
+                    } else {
+                        $partnerusers[]= $partner;
+                    }
+                }
+
+                $fieldvalue = implode(" &raquo; ", $partnerusers);
+            }
+
+            // {$scenefield['fidX']}  
+            $arraylabel = $field;
+            $array[$arraylabel] = $fieldvalue;
+        }
+    }
   
     return $array;
 }
@@ -3678,6 +2930,7 @@ function inplayquotes_getNextId($tablename){
     return $lastId;
 }
 
+// Zwischen den Foren
 function inplayquotes_forumbits(&$forum) {
 
     global $db, $cache, $mybb, $lang, $templates, $theme, $parser, $code_html;
@@ -4081,7 +3334,7 @@ function inplayquotes_forumbits(&$forum) {
 
         // Lösch Link
         if(($mybb->usergroup['canmodcp'] == '1' OR $pos !== false) AND $active_uid != 0){
-            $del_quote = "<a href=\"misc.php?action=inplayquotes&quote_delete=".$qid."\">".$lang->inplayquotes_quote_delete."</a>";
+            $del_quote = "<a href=\"misc.php?action=inplayquotes&quote_delete=".$qid."\" onClick=\"return confirm('Möchtest du dieses Zitat wirklich löschen?');\">".$lang->inplayquotes_quote_delete."</a>";
         } else {
             $del_quote = "";
         }
@@ -4090,4 +3343,1131 @@ function inplayquotes_forumbits(&$forum) {
     }
 
     eval("\$forum['inplayquotes_index'] = \"".$templates->get("inplayquotes_index")."\";");
+}
+
+// DATENBANKTABELLEN
+function inplayquotes_database() {
+
+    global $db;
+    
+    // DATENBANKEN ERSTELLEN
+    // Inplayzitate
+    if (!$db->table_exists("inplayquotes")) {
+        $db->query("CREATE TABLE ".TABLE_PREFIX."inplayquotes(
+            `qid` int(11) unsigned NOT NULL AUTO_INCREMENT,
+            `uid` int(11) unsigned NOT NULL,
+            `username` VARCHAR(120) COLLATE utf8_general_ci NOT NULL,
+            `tid` int(11) unsigned NOT NULL,
+            `pid` int(11) unsigned NOT NULL,
+            `date` int(11) unsigned NOT NULL,
+            `quote` VARCHAR(5000) COLLATE utf8_general_ci NOT NULL,
+            PRIMARY KEY(`qid`),
+            KEY `qid` (`qid`)
+            )
+            ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci AUTO_INCREMENT=1    
+        ");
+    }
+    // vergebenen Reaktionen
+    if (!$db->table_exists("inplayquotes_reactions")) {
+        $db->query("CREATE TABLE ".TABLE_PREFIX."inplayquotes_reactions(
+            `rid` int(11) unsigned NOT NULL AUTO_INCREMENT,
+            `reaction` int(11) unsigned NOT NULL,
+            `qid` int(11) unsigned NOT NULL,
+            `uid` int(11) unsigned NOT NULL,
+            `username` VARCHAR(120) COLLATE utf8_general_ci NOT NULL,
+            PRIMARY KEY(`rid`),
+            KEY `rid` (`rid`)
+            )
+            ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci AUTO_INCREMENT=1    
+        ");
+    }
+    // Reaktionen Einstellungen
+    if (!$db->table_exists("inplayquotes_reactions_settings")) {
+        $db->query("CREATE TABLE ".TABLE_PREFIX."inplayquotes_reactions_settings(
+            `rsid` int(10) unsigned NOT NULL AUTO_INCREMENT,
+            `name` varchar(255) COLLATE utf8_general_ci NOT NULL,
+            `image` varchar(255) COLLATE utf8_general_ci NOT NULL,
+            PRIMARY KEY(`rsid`),
+            KEY `rsid` (`rsid`)
+            )
+            ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci AUTO_INCREMENT=1    
+        ");
+    }
+}
+
+// EINSTELLUNGEN
+function inplayquotes_settings($type = 'install') {
+
+    global $db; 
+			
+	$setting_array = array(
+        'inplayquotes_allowgroups' => array(
+            'title' => 'Erlaubte Gruppen',
+			'description' => 'Welche Gruppen dürfen Zitate hinzufügen?',
+			'optionscode' => 'groupselect',
+			'value' => '4', // Default
+			'disporder' => 1
+        ),
+		'inplayquotes_quotesarea' => array(
+			'title' => 'Zitate Bereich',
+            'description' => 'Aus welchem Bereich vom Forum können User Zitate einreichen? Es reicht aus, die übergeordneten Kategorien zu markieren.',
+            'optionscode' => 'forumselect',
+            'value' => 'none', // Default
+            'disporder' => 2
+		),
+		'inplayquotes_excludedarea' => array(
+			'title' => 'ausgeschlossene Foren',
+            'description' => 'Gibt es Foren, die innerhalb der ausgewählten Kategorie liegen aber nicht zum Zitate Bereich gezählt werden sollen (z.B. Communication).',
+            'optionscode' => 'forumselect',
+            'value' => 'none', // Default
+            'disporder' => 3
+		),
+		'inplayquotes_user_alert' => array(
+			'title' => 'Benachrichtigungssystem',
+			'description' => 'Wie sollen User darüber in Kenntnis gesetzt werden, dass sie aus dem Inplay zitiert wurden?',
+			'optionscode' => 'select\n0=MyAlerts\n1=Private Nachricht',
+			'value' => 0, // Default
+			'disporder' => 4
+		),
+		'inplayquotes_overview_guest' => array(
+			'title' => 'Gästeberechtigung',
+            'description' => 'Dürfen Gäste die Übersicht aller Inplayzitate sehen?',
+            'optionscode' => 'yesno',
+            'value' => '1', // Default
+            'disporder' => 5
+		),
+		'inplayquotes_overview_multipage' => array(
+			'title' => 'Zitate pro Seite',
+            'description' => 'Wie viele Inplayzitate sollen pro Seite der Übersicht angezeigt werden (0 = Keine Beschränkung)?',
+            'optionscode' => 'numeric',
+            'value' => '0', // Default
+            'disporder' => 6
+		),
+		'inplayquotes_overview_filter' => array(
+			'title' => 'Filteroptionen',
+            'description' => 'Nach welchen Optionen können die Zitate auf der Übersichtsseite gefiltert werden?',
+            'optionscode' => 'checkbox\nplayer=nach Spieler\ncharacter=nach Charakter\ntimestamp=nach Postdatum',
+            'value' => '', // Default
+            'disporder' => 7
+		),
+		'inplayquotes_overview_graphic' => array(
+			'title' => 'Grafiktyp',
+            'description' => 'Welche Grafik soll vom zitierten Charakter angezeigt werden? Zur Auswahl steht klassisch der Avatar, ein Element aus dem Uploadsystem von little.evil.genius, ein klassisches Profilfeld oder ein Feld aus dem Steckbriefplugin von risuena.',
+            'optionscode' => 'select\n0=Avatar\n1=Upload-Element\n2=Profilfeld\n3=Steckbrieffeld',
+            'value' => '0', // Default
+            'disporder' => 8
+		),
+		'inplayquotes_overview_graphic_uploadsystem' => array(
+			'title' => 'Identifikator von dem Upload-Element',
+            'description' => 'Wie lautet der Identifikator von dem Upload-Element, welches vom zitierten Charakter als Grafik genutzt werden soll',
+            'optionscode' => 'text',
+            'value' => 'index', // Default
+            'disporder' => 9
+		),
+		'inplayquotes_overview_graphic_profilefield' => array(
+			'title' => 'FID von dem Profilfeld',
+            'description' => 'Wie lautet die FID von dem Profilfeld, welches vom zitierten Charakter als Grafik genutzt werden soll?',
+            'optionscode' => 'numeric',
+            'value' => '6', // Default
+            'disporder' => 10
+		),
+		'inplayquotes_overview_graphic_characterfield' => array(
+			'title' => 'Identifikator von dem Steckbrieffeld',
+            'description' => 'Wie lautet der Identifikator von dem Steckbrieffeld, welches vom zitierten Charakter als Grafik genutzt werden soll?',
+            'optionscode' => 'text',
+            'value' => 'index_pic', // Default
+            'disporder' => 11
+		),
+		'inplayquotes_overview_graphic_defaultgraphic' => array(
+			'title' => 'Standard-Grafik',
+            'description' => 'Wie heißt die Bilddatei für die Standard-Grafik? Diese Grafik wird, falls ein Charakter noch keine entsprechende Grafik besitzt, oder es sich um einen gelöschten Charakter handelt, stattdessen angezeigt. Damit die Grafik für jedes Design angepasst wird, sollte der Dateiname in allen Ordner für die Designs gleich heißen.',
+            'optionscode' => 'text',
+            'value' => 'default_avatar.png', // Default
+            'disporder' => 12
+		),
+        'inplayquotes_overview_graphic_guest' => array(
+            'title' => 'Gäste-Ansicht',
+            'description' => 'Sollen die Grafiken von den zitierten Charakteren vor Gästen versteckt werden? Statt der Grafik wird die festgelegte Standard-Grafik angezeigt.',
+            'optionscode' => 'yesno',
+            'value' => '1', // Default
+            'disporder' => 13
+        ),
+        'inplayquotes_profilfeldsystem' => array(
+            'title' => 'Profilfeldsystem',
+            'description' => 'Um zusätzliche Informationen über dem zitierten Charakter/Spieler auszugeben, muss angegeben werden, mit welchem Profilfeldsystem gearbeitet wird. Es kann auch ausgewählt werden, dass beide Varianten verwendet werden.',
+            'optionscode' => 'select\n0=klassische Profilfelder\n1=Steckbrief-Plugin\n2=beide Varianten',
+            'value' => '0', // Default
+            'disporder' => 14
+        ),
+		'inplayquotes_reactions' => array(
+			'title' => 'Overview: Reaktionen auf Zitate',
+            'description' => 'Dürfen User auf eingereichten Zitate reagieren?',
+            'optionscode' => 'yesno',
+            'value' => '1', // Default
+            'disporder' => 15
+		),
+		'inplayquotes_reactions_option' => array(
+			'title' => 'Vergabe der Reaktionen',
+            'description' => 'Darf jeder Spieler nur einmal insgesamt (egal welcher Charakter) auf ein Zitat reagieren oder mit jedem Charakter jeweils einmal?<br><b>Hinweis:</b> Die einmalige Vergabe bezieht sich auf jede Reaktionsmöglichkeit einzeln.',
+            'optionscode' => 'select\n0=pro Spieler\n1=pro Charakter',
+            'value' => '1', // Default
+            'disporder' => 16
+		),
+		'inplayquotes_playername' => array(
+			'title' => 'Spielername',
+			'description' => 'Wie lautet die FID / der Identifikator von dem Profilfeld/Steckbrieffeld für den Spielernamen?<br>
+            <b>Hinweis:</b> Bei klassischen Profilfeldern muss eine Zahl eingetragen werden. Bei dem Steckbrief-Plugin von Risuena muss der Name/Identifikator des Felds eingetragen werden.',
+			'optionscode' => 'text',
+			'value' => '4', // Default
+			'disporder' => 17
+		),
+		'inplayquotes_inplaytracker' => array(
+			'title' => 'Szeneninformation ausgeben',
+            'description' => 'Um zusätzliche Informationen über die Szene ausgeben zu können, aus der das Zitat stammt, muss angegeben werden welcher Inplaytracker benutzt wird.',
+            'optionscode' => 'select\n0=keine Informationen\n1=Inplaytracker 2.0 von sparks fly\n2=Inplaytracker 3.0 von sparks fly\n3=Szenentracker von risuena\n4=Inplaytracker von little.evil.genius\n5=Inplaytracker 1.0 von Ales\n6=Inplaytracker 2.0 von Ales',
+            'value' => '0', // Default
+            'disporder' => 18
+		),
+        'inplayquotes_lists' => array(
+            'title' => 'Listen PHP',
+            'description' => 'Wie heißt die Hauptseite der Listen-Seite? Dies dient zur Ergänzung der Navigation. Falls nicht gewünscht einfach leer lassen.',
+            'optionscode' => 'text',
+            'value' => 'lists.php', // Default
+            'disporder' => 19
+        ),
+		'inplayquotes_lists_type' => array(
+			'title' => 'Listen Menü',
+			'description' => 'Soll über die Variable {$lists_menu} das Menü der Listen aufgerufen werden?<br>Wenn ja, muss noch angegeben werden, ob eine eigene PHP-Datei oder das Automatische Listen-Plugin von sparks fly genutzt?',
+			'optionscode' => 'select\n0=eigene Listen/PHP-Datei\n1=Automatische Listen-Plugin\n2=keine Menü-Anzeige',
+			'value' => '2', // Default
+			'disporder' => 20
+		),
+        'inplayquotes_lists_menu' => array(
+            'title' => 'Listen Menü Template',
+            'description' => 'Damit das Listen Menü richtig angezeigt werden kann, muss hier einmal der Name von dem Tpl von dem Listen-Menü angegeben werden.',
+            'optionscode' => 'text',
+            'value' => 'lists_nav', // Default
+            'disporder' => 21
+        ),
+		'inplayquotes_profile' => array(
+			'title' => 'zufälliges Zitat im Profil',
+            'description' => 'Soll im Profil ein zufälliges Zitat des Charakters angezeigt werden? Sollte kein passendes Zitat vorhanden sein, wird ein Default Text angezeigt.',
+            'optionscode' => 'yesno',
+            'value' => '0', // Default
+            'disporder' => 22
+		),
+		'inplayquotes_deletion' => array(
+			'title' => 'Zitat löschen',
+            'description' => 'Sollen Inplayzitate von gelöschten Usern gelöscht werden?',
+            'optionscode' => 'yesno',
+            'value' => '0', // Default
+            'disporder' => 23
+		),
+		'inplayquotes_indexarea' => array(
+			'title' => 'Anzeige auf dem Index',
+            'description' => 'Soll ein zufälliges Inplayzitat über einem bestimmten Forum dargestellt werden? Die Index-Variable kann dennoch benutzt werden.',
+            'optionscode' => 'forumselectsingle',
+            'value' => '', // Default
+            'disporder' => 24
+		),
+	);
+
+    $gid = $db->fetch_field($db->write_query("SELECT gid FROM ".TABLE_PREFIX."settinggroups WHERE name = 'inplayquotes' LIMIT 1;"), "gid");
+
+    if ($type == 'install') {
+        foreach ($setting_array as $name => $setting) {
+          $setting['name'] = $name;
+          $setting['gid'] = $gid;
+          $db->insert_query('settings', $setting);
+        }  
+    }
+
+    if ($type == 'update') {
+
+        // Einzeln durchgehen 
+        foreach ($setting_array as $name => $setting) {
+            $setting['name'] = $name;
+            $check = $db->write_query("SELECT name FROM ".TABLE_PREFIX."settings WHERE name = '".$name."'"); // Überprüfen, ob sie vorhanden ist
+            $check = $db->num_rows($check);
+            $setting['gid'] = $gid;
+            if ($check == 0) { // nicht vorhanden, hinzufügen
+              $db->insert_query('settings', $setting);
+            } else { // vorhanden, auf Änderungen überprüfen
+                
+                $current_setting = $db->fetch_array($db->write_query("
+                    SELECT title, description, optionscode, disporder 
+                    FROM ".TABLE_PREFIX."settings 
+                    WHERE name = '".$db->escape_string($name)."'
+                "));
+            
+                $update_needed = false;
+                $update_data = array();
+            
+                if ($current_setting['title'] != $setting['title']) {
+                    $update_data['title'] = $setting['title'];
+                    $update_needed = true;
+                }
+                if ($current_setting['description'] != $setting['description']) {
+                    $update_data['description'] = $setting['description'];
+                    $update_needed = true;
+                }
+                if ($current_setting['optionscode'] != $setting['optionscode']) {
+                    $update_data['optionscode'] = $setting['optionscode'];
+                    $update_needed = true;
+                }
+                if ($current_setting['disporder'] != $setting['disporder']) {
+                    $update_data['disporder'] = $setting['disporder'];
+                    $update_needed = true;
+                }
+            
+                if ($update_needed) {
+                    $db->update_query('settings', $update_data, "name = '".$db->escape_string($name)."'");
+                }
+            }            
+        }  
+    }
+
+    rebuild_settings();
+}
+
+// TEMPLATES
+function inplayquotes_templates($mode = '') {
+
+    global $db;
+
+    $templates[] = array(
+        'title'		=> 'inplayquotes_index',
+        'template'	=> $db->escape_string('<div class="inplayquotes_index">
+        <div class="inplayquotes_index-headline">{$lang->inplayquotes_index_headline}</div>
+        {$inplayquote_bit}
+        <div class="inplayquotes_index-allquotes">
+            <span class="smalltext"><a href="misc.php?action=inplayquotes">{$lang->inplayquotes_index_link}</a></span>
+        </div>
+        </div>'),
+        'sid'		=> '-2',
+        'dateline'	=> TIME_NOW
+    );
+
+    $templates[] = array(
+        'title'		=> 'inplayquotes_index_bit',
+        'template'	=> $db->escape_string('<div class="inplayquotes_index_bit">
+        <div class="inplayquotes_index_bit_avatar">
+            <img src="{$graphic_link}">
+            {$del_quote}
+        </div>
+        <div class="inplayquotes_index_bit_container">
+            <div class="inplayquotes_index_bit_quote">
+                {$inplayquote}
+            </div>
+            <div class="inplayquotes_index_bit_footer">
+                <div class="inplayquotes_index_bit_reaction">{$reactions}</div>
+                <div class="inplayquotes_index_bit_user">
+                    <b>{$charactername_link}</b><br>
+                    <span>{$scene_link}</span><br>
+                    <span>{$postdate}</span>
+                </div>
+            </div>
+        </div>
+        </div>'),
+        'sid'		=> '-2',
+        'dateline'	=> TIME_NOW
+    );
+
+    $templates[] = array(
+        'title'		=> 'inplayquotes_index_bit_none',
+        'template'	=> $db->escape_string('<div class="inplayquotes_index_bit">
+        {$lang->inplayquotes_index_bit_none}
+    </div>'),
+        'sid'		=> '-2',
+        'dateline'	=> TIME_NOW
+    );
+
+    $templates[] = array(
+        'title'		=> 'inplayquotes_memberprofile',
+        'template'	=> $db->escape_string('<div class="inplayquotes_memberprofile">
+        <div class="inplayquotes_memberprofile-headline">{$lang->inplayquotes_memberprofile_headline}</div>
+        {$inplayquote_bit}
+        <div class="inplayquotes_memberprofile-allquotes">
+            <span class="smalltext">{$all_inplayquotes}</span>
+        </div>
+        </div>'),
+        'sid'		=> '-2',
+        'dateline'	=> TIME_NOW
+    );
+
+    $templates[] = array(
+        'title'		=> 'inplayquotes_memberprofile_bit',
+        'template'	=> $db->escape_string('<div class="inplayquotes_memberprofile_bit">
+        <div class="inplayquotes_memberprofile_bit_container">
+            <div class="inplayquotes_memberprofile_bit_quote">
+                {$inplayquote}
+            </div>
+            <div class="inplayquotes_memberprofile_bit_footer">
+                <span>{$scene_link}</span><br>
+                <span>{$postdate}</span>
+            </div>
+        </div>
+     </div>'),
+        'sid'		=> '-2',
+        'dateline'	=> TIME_NOW
+    );
+
+    $templates[] = array(
+        'title'		=> 'inplayquotes_memberprofile_bit_none',
+        'template'	=> $db->escape_string('<div class="inplayquotes_memberprofile_bit">
+        <div class="inplayquotes_memberprofile_bit_container">
+            {$lang->inplayquotes_memberprofile_bit_none}
+        </div>
+        </div>'),
+        'sid'		=> '-2',
+        'dateline'	=> TIME_NOW
+    );
+
+    $templates[] = array(
+        'title'		=> 'inplayquotes_overview',
+        'template'	=> $db->escape_string('<html>
+        <head>
+            <title>{$mybb->settings[\'bbname\']} - {$lang->inplayquotes_overview}</title>
+            {$headerinclude}</head>
+        <body>
+            {$header}
+            <table width="100%" cellspacing="{$theme[\'borderwidth\']}" cellpadding="{$theme[\'tablespace\']}">
+                <tr>
+                    <td valign="top">
+                        <div id="inplayquotes_overview">
+                            <div class="inplayquotes-headline">{$lang->inplayquotes_overview}</div>
+                            {$filter_option}
+                            <div class="inplayquotes-body">
+                                {$inplayquotes_bit}
+                                {$multipage}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            {$footer}
+        </body>
+        </html>'),
+        'sid'		=> '-2',
+        'dateline'	=> TIME_NOW
+    );
+
+    $templates[] = array(
+        'title'		=> 'inplayquotes_overview_bit',
+        'template'	=> $db->escape_string('<div class="inplayquotes_overview_bit">
+        <div class="inplayquotes_overview_bit_avatar">
+            <img src="{$graphic_link}">
+            {$del_quote}
+        </div>
+        <div class="inplayquotes_overview_bit_container">
+            <div class="inplayquotes_overview_bit_quote">
+                {$inplayquote}
+            </div>
+            <div class="inplayquotes_overview_bit_footer">
+                <div class="inplayquotes_overview_bit_reaction">{$reactions}</div>
+                <div class="inplayquotes_overview_bit_user">
+                    <b>{$charactername_link}</b><br>
+                    <span>{$scene_link}</span><br>
+                    <span>{$postdate}</span>
+                </div>
+            </div>
+        </div>
+    </div>'),
+        'sid'		=> '-2',
+        'dateline'	=> TIME_NOW
+    );
+
+    $templates[] = array(
+        'title'		=> 'inplayquotes_overview_filter',
+        'template'	=> $db->escape_string('<form id="inplayquotes_filter" method="get" action="misc.php">
+        <input type="hidden" name="action" value="inplayquotes" />
+        <div class="inplayquotes-filter">
+            <div class="inplayquotes-filter-headline">{$lang->inplayquotes_filter}</div>
+            <div class="inplayquotes-filteroptions">
+                {$filter_bit}
+            </div>
+            <center>
+                <input type="submit" name="inplayquotes_search_filter" value="{$lang->inplayquotes_filter_button}" id="inplayquotes_search_filter" class="button">
+            </center>
+        </div>
+        </form>'),
+        'sid'		=> '-2',
+        'dateline'	=> TIME_NOW
+    );
+
+    $templates[] = array(
+        'title'		=> 'inplayquotes_overview_filter_bit',
+        'template'	=> $db->escape_string('<div class="inplayquotes_overview_filter_bit">
+        <div class="inplayquotes-filter-bit-headline">{$filter_headline}</div>
+        <div class="inplayquotes-filter-bit-dropbox">
+            {$filter_select}
+        </div>
+    </div>'),
+        'sid'		=> '-2',
+        'dateline'	=> TIME_NOW
+    );
+
+    $templates[] = array(
+        'title'		=> 'inplayquotes_postbit',
+        'template'	=> $db->escape_string('<a href="" onclick="$(\'#inplayquotes_{$pid}\').modal({ fadeDuration: 250, keepelement: true, zIndex: (typeof modal_zindex !== \'undefined\' ? modal_zindex : 9999) }); return false;" class="postbit_quote postbit_mirage"><span>{$lang->inplayquotes_postbit}</span></a>
+        <script>
+            // Funktion zum Speichern des markierten Textes und Einfügen in die Textarea
+            function saveSelectedText(event) {
+                if (window.getSelection().toString().length) {
+                    var postId = event.target.id.replace(\'pid_\', \'\');
+                    document.getElementById("quotebox" + postId).value = window.getSelection().toString();
+                }
+            }
+        
+            // Eventlistener für das Speichern des markierten Textes auf jedem Beitrag/Post im Thema
+            var posts = document.querySelectorAll(\'.post_body\');
+            posts.forEach(function(post) {
+                post.addEventListener(\'mouseup\', function(event) {
+                    saveSelectedText(event);
+                });
+            });
+        </script>
+        {$inplayquotes_popup}'),
+        'sid'		=> '-2',
+        'dateline'	=> TIME_NOW
+    );
+
+    $templates[] = array(
+        'title'		=> 'inplayquotes_postbit_popup',
+        'template'	=> $db->escape_string('<div id="inplayquotes_{$pid}" class="modal" style="display: none;">
+        <div class="inplayquotes_popup">
+            <div class="inplayquotes_popup-headline">{$lang->inplayquotes_postbit_popup}</div>
+            <div class="inplayquotes_popup-quoteInfo">
+                {$quote_infos}
+            </div>
+            <form id="new_inplayquotes" method="post" action="misc.php?action=add_inplayquote&pid={$pid}">
+                <div class="inplayquotes_popup-textarea">
+                    {$lang->inplayquotes_postbit_popup_quote}
+                    <textarea name="inplayquote" id="quotebox{$pid}" style="width: 300px; height: 100px;" maxlength="5000"></textarea>
+                </div>
+                <div class="inplayquotes_popup-button">
+                    <input type="hidden" name="sendby" value="{$active_uid}" />
+                    <input type="submit" name="inplayquotes_submit" id="inplayquotes_submit" value="{$lang->inplayquotes_postbit_popup_button}" class="button">
+                </div>
+            </form>
+        </div>
+        </div>'),
+        'sid'		=> '-2',
+        'dateline'	=> TIME_NOW
+    );
+
+    $templates[] = array(
+        'title'		=> 'inplayquotes_reactions',
+        'template'	=> $db->escape_string('<div class="inplayquotes_overview_bit_reaction">
+        <div class="inplayquotes_overview_bit_reaction_bit">
+            {$stored_reactions}
+            {$reactions_add}
+        </div>
+        {$reacted_reactions}
+        {$delete_reactions}
+        </div>'),
+        'sid'		=> '-2',
+        'dateline'	=> TIME_NOW
+    );
+
+    $templates[] = array(
+        'title'		=> 'inplayquotes_reactions_add',
+        'template'	=> $db->escape_string('<div class="inplayquotes_overview_bit_reaction">
+        <a href="" onclick="$(\'#inplayquotesReactions_{$qid}\').modal({ fadeDuration: 250, keepelement: true, zIndex: (typeof modal_zindex !== \'undefined\' ? modal_zindex : 9999) }); return false;" class="postbit_quote postbit_mirage"><span>{$lang->inplayquotes_reactions_add}</span></a>
+        </div>
+        {$reactions_popup}'),
+        'sid'		=> '-2',
+        'dateline'	=> TIME_NOW
+    );
+
+    $templates[] = array(
+        'title'		=> 'inplayquotes_reactions_add_popup',
+        'template'	=> $db->escape_string('<div id="inplayquotesReactions_{$qid}" class="modal" style="display: none;">
+        <div class="inplayquotes_popup">
+            <div class="inplayquotes_popup-headline">{$lang->inplayquotes_reactions_add}</div>
+            <div class="inplayquotes_popup-quoteInfo">
+                {$quote_preview}
+            </div>
+            <div class="inplayquotes_popup-subline">{$lang->inplayquotes_reactions_add_desc}</div>
+            <form id="new_inplayquotesReactions" method="post" action="misc.php?action=add_inplayquote_reaction">
+                <input type="hidden" name="sendby" value="{$active_uid}" />
+                <input type="hidden" name="selected_reaction_id" id="selected_reaction_id" /> 
+                <div class="inplayquotes_popup-reactions">
+                    {$reactions_images}
+                </div>
+            </form>
+        </div>
+        </div>
+    
+        <script>
+        function selectReaction(reactionId, qid) {
+            document.getElementById(\'selected_reaction_id\').value = reactionId;
+            document.getElementById(\'new_inplayquotesReactions\').setAttribute(\'action\', \'misc.php?action=add_inplayquote_reaction&qid=\' + qid);
+            document.getElementById(\'new_inplayquotesReactions\').submit();
+        }
+        </script>'),
+        'sid'		=> '-2',
+        'dateline'	=> TIME_NOW
+    );
+
+    $templates[] = array(
+        'title'		=> 'inplayquotes_reactions_add_popup_image',
+        'template'	=> $db->escape_string('<img src="{$mybb->settings[\'bburl\']}/{$image}" alt="" style="cursor: pointer;" onclick="selectReaction({$rsid}, {$qid})">
+        <script>
+            function selectReaction(reactionId) {
+                document.getElementById(\'selected_reaction_id\').value = reactionId;
+                document.getElementById(\'new_inplayquotesReactions\').submit();
+            }
+        </script>'),
+        'sid'		=> '-2',
+        'dateline'	=> TIME_NOW
+    );
+
+    $templates[] = array(
+        'title'		=> 'inplayquotes_reactions_reacted',
+        'template'	=> $db->escape_string('<div class="inplayquotes_overview_bit_reaction-reacted">
+        {$lang->inplayquotes_reactions_reacted}
+        {$reacted_images}
+        </div>'),
+        'sid'		=> '-2',
+        'dateline'	=> TIME_NOW
+    );
+
+    $templates[] = array(
+        'title'		=> 'inplayquotes_reactions_reacted_image',
+        'template'	=> $db->escape_string('<img src="{$image}"> <a href="misc.php?action=inplayquotes&reactions_delete={$reaction}&reactions_quote={$qid}">x</a>'),
+        'sid'		=> '-2',
+        'dateline'	=> TIME_NOW
+    );
+
+    $templates[] = array(
+        'title'		=> 'inplayquotes_reactions_stored',
+        'template'	=> $db->escape_string('<div class="inplayquotes_overview_bit_reaction_images">
+        <img src="{$mybb->settings[\'bburl\']}/{$image}" title="{$title}" /> <span>{$count}</span>
+        </div>'),
+        'sid'		=> '-2',
+        'dateline'	=> TIME_NOW
+    );
+
+    if ($mode == "update") {
+
+        foreach ($templates as $template) {
+            $query = $db->simple_select("templates", "tid, template", "title = '".$template['title']."' AND sid = '-2'");
+            $existing_template = $db->fetch_array($query);
+
+            if($existing_template) {
+                if ($existing_template['template'] !== $template['template']) {
+                    $db->update_query("templates", array(
+                        'template' => $template['template'],
+                        'dateline' => TIME_NOW
+                    ), "tid = '".$existing_template['tid']."'");
+                }
+            }
+            
+            else {
+                $db->insert_query("templates", $template);
+            }
+        }
+
+    } else {
+        foreach ($templates as $template) {
+            $check = $db->num_rows($db->simple_select("templates", "title", "title = '".$template['title']."'"));
+            if ($check == 0) {
+                $db->insert_query("templates", $template);
+            }
+        }
+    }
+}
+
+// STYLESHEET MASTER
+function inplayquotes_stylesheet() {
+
+    global $db;
+    
+    $css = array(
+        'name' => 'inplayquotes.css',
+        'tid' => 1,
+        'attachedto' => '',
+        "stylesheet" => '.inplayquotes_popup {
+            background: #ffffff;
+            width: 100%;
+            margin: auto auto;
+            border: 1px solid #ccc;
+            padding: 1px;
+            -moz-border-radius: 7px;
+            -webkit-border-radius: 7px;
+            border-radius: 7px;
+        }
+        
+        .inplayquotes_popup-headline {
+            background: #0066a2 url(../../../images/thead.png) top left repeat-x;
+            color: #ffffff;
+            border-bottom: 1px solid #263c30;
+            padding: 8px;
+            -moz-border-radius-topleft: 6px;
+            -moz-border-radius-topright: 6px;
+            -webkit-border-top-left-radius: 6px;
+            -webkit-border-top-right-radius: 6px;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+        }
+        
+        .inplayquotes_popup-quoteInfo {
+            background: #f5f5f5;
+            border: 1px solid;
+            border-color: #fff #ddd #ddd #fff;
+            padding: 5px 0;
+        }
+        
+        .inplayquotes_popup-textarea {
+            background: #f5f5f5;
+            border: 1px solid;
+            border-color: #fff #ddd #ddd #fff;
+            text-align: center;
+            padding: 5px 0;
+        }
+        
+        .inplayquotes_popup-button {
+            border-top: 1px solid #fff;
+            padding: 6px;
+            background: #ddd;
+            color: #666;
+            -moz-border-radius-bottomleft: 6px;
+            -webkit-border-bottom-left-radius: 6px;
+            border-bottom-left-radius: 6px;
+            -moz-border-radius-bottomright: 6px;
+            -webkit-border-bottom-right-radius: 6px;
+            border-bottom-right-radius: 6px;
+            border-bottom: 0;
+            text-align: center;
+        }
+        
+        #inplayquotes_overview {
+            box-sizing: border-box;
+            background: #fff;
+            border: 1px solid #ccc;
+            padding: 1px;
+            -moz-border-radius: 7px;
+            -webkit-border-radius: 7px;
+            border-radius: 7px;
+        }
+        
+        .inplayquotes-headline {
+            height: 50px;
+            width: 100%;
+            font-size: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            text-transform: uppercase;
+            background: #0066a2 url(../../../images/thead.png) top left repeat-x;
+            color: #ffffff;
+            -moz-border-radius-topleft: 6px;
+            -moz-border-radius-topright: 6px;
+            -webkit-border-top-left-radius: 6px;
+            -webkit-border-top-right-radius: 6px;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+        }
+        
+        .inplayquotes-filter {
+            background: #f5f5f5;
+        }
+        
+        .inplayquotes-filter-headline {
+            background: #0f0f0f url(../../../images/tcat.png) repeat-x;
+            color: #fff;
+            border-top: 1px solid #444;
+            border-bottom: 1px solid #000;
+            padding: 6px;
+            font-size: 12px;
+        }
+        
+        .inplayquotes-filteroptions {
+            display: flex;
+            justify-content: space-around;
+            width: 90%;
+            margin: 10px auto;
+            gap: 5px;
+        }
+        
+        .inplayquotes_overview_filter_bit {
+            width: 100%;
+            text-align: center;
+        }
+        
+        .inplayquotes-filter-bit-headline {
+            padding: 6px;
+            background: #ddd;
+            color: #666;
+        }
+        
+        .inplayquotes-filter-bit-dropbox {
+            margin: 5px;
+        }
+        
+        .inplayquotes-body {
+            background: #f5f5f5;
+            padding: 20px 40px;
+            text-align: justify;
+            line-height: 180%;
+            -moz-border-radius-bottomright: 6px;
+            -webkit-border-bottom-right-radius: 6px;
+            border-bottom-right-radius: 6px;
+            -moz-border-radius-bottomleft: 6px;
+            -webkit-border-bottom-left-radius: 6px;
+            border-bottom-left-radius: 6px;
+        }
+        
+        .inplayquotes_overview_bit {
+            width: 100%;
+            display: flex;
+            margin: 20px 0;
+            flex-wrap: nowrap;
+            align-items: center;
+        }
+        
+        .inplayquotes_overview_bit:nth-child(even) {
+            flex-direction: row-reverse;
+        }
+        
+        .inplayquotes_overview_bit_avatar {
+            width: 10%;
+            text-align: center;
+        }
+        
+        .inplayquotes_overview_bit_avatar img {
+            border-radius: 100%;
+            border: 2px solid #0071bd;
+            width: 100px;
+        }
+        
+        .inplayquotes_overview_bit_container {
+            width: 90%;
+        }
+        
+        .inplayquotes_overview_bit_quote {
+            width: 95%;
+            margin: auto;
+            font-size: 15px;
+            text-align: justify;
+            margin-bottom: 10px;
+        }
+        
+        .inplayquotes_overview_bit_footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .inplayquotes_overview_bit_reaction a:link,
+        .inplayquotes_overview_bit_reaction a:active,
+        .inplayquotes_overview_bit_reaction a:visited,
+        .inplayquotes_overview_bit_reaction a:hover{
+            background:#ddd;
+            border-radius: 0;
+            color: #666;
+            font-size: 9px;
+            text-transform: uppercase;
+            padding: 7px 5px;
+        } 
+        
+        .inplayquotes_popup-quotepreview {
+            background: #f5f5f5;
+            border: 1px solid;
+            border-color: #fff #ddd #ddd #fff;
+            padding: 5px 0;
+        }
+        
+        .inplayquotes_popup-subline {
+            background: #0f0f0f url(../../../images/tcat.png) repeat-x;
+            color: #fff;
+            border-top: 1px solid #444;
+            border-bottom: 1px solid #000;
+            padding: 6px;
+            font-size: 12px;
+        }
+        
+        .inplayquotes_popup-reactions {
+            background: #f5f5f5;
+            border: 1px solid;
+            border-color: #fff #ddd #ddd #fff;
+            text-align: center;
+            padding: 5px 0;
+            -moz-border-radius-bottomright: 6px;
+            -webkit-border-bottom-right-radius: 6px;
+            border-bottom-right-radius: 6px;
+            -moz-border-radius-bottomleft: 6px;
+            -webkit-border-bottom-left-radius: 6px;
+            border-bottom-left-radius: 6px;
+        }
+        
+        .inplayquotes_popup-reactions img {
+            width: 24px;
+            height: 24px;
+            padding: 5px;
+            cursor: pointer;
+        }
+        
+        .inplayquotes_overview_bit_reaction_bit {
+            display: flex; 
+            gap: 5px;
+        }
+        
+        .inplayquotes_overview_bit_reaction-reacted {
+            margin-top: 5px;
+        }
+        
+        .inplayquotes_overview_bit_reaction-reacted img {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .inplayquotes_overview_bit_reaction-reacted a:link,
+        .inplayquotes_overview_bit_reaction-reacted a:active,
+        .inplayquotes_overview_bit_reaction-reacted a:visited,
+        .inplayquotes_overview_bit_reaction-reacted a:hover{
+                background: none;
+                color: #0072BC;
+                font-size: 10px;
+                text-transform: none;
+                padding: 0;
+        }
+        
+        .inplayquotes_overview_bit_reaction_images {
+            background: #ddd;
+            border-radius: 0;
+            color: #666;
+            font-size: 9px;
+            text-transform: uppercase;
+            padding: 0 5px;
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        
+        .inplayquotes_overview_bit_reaction_images img {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .inplayquotes_overview_bit_reactions_delete a:link, 
+        .inplayquotes_overview_bit_reactions_delete a:active, 
+        .inplayquotes_overview_bit_reactions_delete a:visited, 
+        .inplayquotes_overview_bit_reactions_deletea:hover {
+            background: none;
+            border-radius: 0;
+            color: #0072BC;
+            font-size: 9px;
+            text-transform: uppercase;
+            padding: 0;
+        }
+        
+        .inplayquotes_overview_bit_user {
+            text-align: right;
+            line-height: 15px;
+        }
+        
+        .inplayquotes_overview_bit_user b {
+            text-transform: uppercase;
+        }
+        
+        .inplayquotes_overview_bit_user span {
+            font-style: italic;
+            font-size: 11px;
+        }
+        
+        .inplayquotes_index {
+            background: #fff;
+            width: 100%;
+            margin: auto auto;
+            border: 1px solid #ccc;
+            padding: 1px;
+            -moz-border-radius: 7px;
+            -webkit-border-radius: 7px;
+            border-radius: 7px;
+        }
+        
+        .inplayquotes_index-headline {
+            background: #0066a2 url(../../../images/thead.png) top left repeat-x;
+            color: #ffffff;
+            border-bottom: 1px solid #263c30;
+            padding: 8px;
+            -moz-border-radius-topleft: 6px;
+            -moz-border-radius-topright: 6px;
+            -webkit-border-top-left-radius: 6px;
+            -webkit-border-top-right-radius: 6px;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+        }
+        
+        .inplayquotes_index-allquotes {
+            border-top: 1px solid #fff;
+            padding: 6px;
+            background: #ddd;
+            color: #666;
+            text-align: right;
+            -moz-border-radius-bottomright: 6px;
+            -webkit-border-bottom-right-radius: 6px;
+            border-bottom-right-radius: 6px;
+            -moz-border-radius-bottomleft: 6px;
+            -webkit-border-bottom-left-radius: 6px;
+            border-bottom-left-radius: 6px;
+        }
+        
+        .inplayquotes_index_bit {
+            background: #f5f5f5;
+            border: 1px solid;
+            border-color: #fff #ddd #ddd #fff;
+            padding: 5px 10px;
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+        }
+        
+        .inplayquotes_index_bit_avatar {
+            width: 10%;
+            text-align: center;
+        }
+        
+        .inplayquotes_index_bit_avatar img {
+            border-radius: 100%;
+            border: 2px solid #0071bd;
+            width: 100px;
+        }
+        
+        .inplayquotes_index_bit_container {
+            width: 90%;
+        }
+        
+        .inplayquotes_index_bit_quote {
+            width: 95%;
+            margin: auto;
+            font-size: 15px;
+            text-align: justify;
+            margin-bottom: 10px;
+        }
+        
+        .inplayquotes_index_bit_footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .inplayquotes_index_bit_user {
+            text-align: right;
+            line-height: 15px;
+        }
+        
+        .inplayquotes_index_bit_user b {
+            text-transform: uppercase;
+        }
+        
+        .inplayquotes_index_bit_user span {
+            font-style: italic;
+            font-size: 11px;
+        }
+        
+        .inplayquotes_memberprofile {
+            background: #fff;
+            margin: auto auto;
+            border: 1px solid #ccc;
+            padding: 1px;
+            -moz-border-radius: 7px;
+            -webkit-border-radius: 7px;
+            border-radius: 7px;
+        }
+        
+        .inplayquotes_memberprofile-headline {
+            background: #0066a2 url(../../../images/thead.png) top left repeat-x;
+            color: #ffffff;
+            border-bottom: 1px solid #263c30;
+            padding: 8px;
+            -moz-border-radius-topleft: 6px;
+            -moz-border-radius-topright: 6px;
+            -webkit-border-top-left-radius: 6px;
+            -webkit-border-top-right-radius: 6px;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+        }
+        
+        .inplayquotes_memberprofile-allquotes {
+            border-top: 1px solid #fff;
+            padding: 6px;
+            background: #ddd;
+            color: #666;
+            text-align: right;
+            -moz-border-radius-bottomright: 6px;
+            -webkit-border-bottom-right-radius: 6px;
+            border-bottom-right-radius: 6px;
+            -moz-border-radius-bottomleft: 6px;
+            -webkit-border-bottom-left-radius: 6px;
+            border-bottom-left-radius: 6px;
+        }
+        .inplayquotes_memberprofile_bit {
+            background: #f5f5f5;
+            border: 1px solid;
+            border-color: #fff #ddd #ddd #fff;
+            padding: 5px 10px;
+        }
+        
+        .inplayquotes_memberprofile_bit_quote {
+            width: 95%;
+            margin: auto;
+            font-size: 15px;
+            text-align: justify;
+            margin-bottom: 10px;
+        }
+        
+        .inplayquotes_memberprofile_bit_footer {
+            text-align: right;
+            line-height: 15px;
+        }
+        
+        .inplayquotes_memberprofile_bit_footer span {
+            text-transform: uppercase;
+            font-style: italic;
+            font-size: 11px;
+        }',
+        'cachefile' => $db->escape_string(str_replace('/', '', 'inplayquotes.css')),
+        'lastmodified' => time()
+    );
+
+    return $css;
+}
+
+// STYLESHEET UPDATE
+function inplayquotes_stylesheet_update() {
+
+    // Update-Stylesheet
+    // wird an bestehende Stylesheets immer ganz am ende hinzugefügt
+    $update = '';
+
+    // Definiere den  Überprüfung-String (muss spezifisch für die Überprüfung sein)
+    $update_string = '';
+
+    return array(
+        'stylesheet' => $update,
+        'update_string' => $update_string
+    );
+}
+
+// UPDATE CHECK
+function inplayquotes_is_updated(){
+
+    global $db;
+
+    $expected_optionscode = "select\n0=keine Informationen\n1=Inplaytracker 2.0 von sparks fly\n2=Inplaytracker 3.0 von sparks fly\n3=Szenentracker von risuena\n4=Inplaytracker von little.evil.genius\n5=Inplaytracker 1.0 von Ales\n6=Inplaytracker 2.0 von Ales";
+
+    $query = $db->simple_select("settings", "optionscode", "name = 'inplayquotes_inplaytracker'");
+    $current_optionscode = $db->fetch_field($query, "optionscode");
+
+    if ($current_optionscode == $expected_optionscode) {
+        return true;
+    }
+
+    return false;
 }
