@@ -1,4 +1,6 @@
+ 
 <?php
+$l['inplayquotes_error_rpgstuff'] = "Das ACP Modul <a href=\"https://github.com/little-evil-genius/rpgstuff_modul\" target=\"_blank\">\"RPG Stuff\"</a> muss vorhanden sein!";
 $l['inplayquotes_error_accountswitcher'] = "Das Plugin <a href=\"http://doylecc.altervista.org/bb/downloads.php?dlid=26&cat=2\" target=\"_blank\">\"Enhanced Account Switcher\"</a> muss installiert sein!";
 
 $l['inplayquotes_permission'] = "Kann die Reaktionsoptionen der Inplayzitate verwalten?";
@@ -16,7 +18,7 @@ $l['inplayquotes_overview_option_delete_notice'] = "Soll dieses Upload-Element w
 $l['inplayquotes_overview_no_elements'] = "Bisher wurden keine Reaktionsmöglichkeiten für die Inplayzitate erstellt.";
 
 $l['inplayquotes_add'] = "Neue Reaktion hinzufügen";
-$l['inplayquotes_add_desc'] = "Hier kannst du eine Reaktion für die Inplayzitate hinzufügen.";
+$l['inplayquotes_add_desc'] = "Hier kannst du eine Reaktionen für die Inplayziatet hinzufügen.";
 $l['inplayquotes_add_error_name'] = "Du hast keinen Namen für diese Reaktion angegeben.";
 $l['inplayquotes_add_error_image'] = "Du hast keinen Pfad angegeben";
 $l['inplayquotes_add_logadmin'] = "Ein neue Reaktion wurde hinzugefügt ";
