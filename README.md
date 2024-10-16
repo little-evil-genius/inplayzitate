@@ -10,6 +10,7 @@ Zusätzlich zum Szenentitel und Postdatum können auch nach Wunsch alle weiteren
 Die Idee zu den Reaktionen auf die Inplayzitate wurde von dem Plugin <a href="https://github.com/MattRogowski/MyReactions">MyReactions</a> von <a href="https://matt.rogow.ski/">Matt Rogowski</a> inspiriert. Die mitgelieferten Bilder für die Reaktionen stammen auch aus diesem Plugin.
 
 # Vorrausetzung
+- Das ACP Modul <a href="https://github.com/little-evil-genius/rpgstuff_modul" target="_blank">RPG Stuff</a> <b>muss</b> vorhanden sein.
 - Der <a href="https://www.mybb.de/erweiterungen/18x/plugins-verschiedenes/enhanced-account-switcher/" target="_blank">Accountswitcher</a> von doylecc <b>muss</b> installiert sein.
   
 # Datenbank-Änderungen
