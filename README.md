@@ -49,7 +49,7 @@ hinzugefügte Tabelle:
 <br>
 <b>HINWEIS:</b><br>
 Das Plugin ist kompatibel mit den klassischen Profilfeldern von MyBB und/oder dem <a href="https://github.com/katjalennartz/application_ucp">Steckbrief-Plugin von Risuena</a>.<br>
-Auch ist das Plugin mit verschiedenen Inplaytrackern/Szenentrackern kompatibel: mit dem <a href="https://github.com/its-sparks-fly/Inplaytracker-2.0">Inplaytracker 2.0 von sparks fly</a>, dem Nachfolger <a href="https://github.com/ItsSparksFly/mybb-inplaytracker">Inplaytracker 3.0 von sparks fly</a>, dem <a href="https://github.com/katjalennartz/scenetracker">Szenentracker von Risuena</a> und dem <a href="https://github.com/Ales12/inplaytracker">Inplaytracker von Ales</a>.<br>
+Auch ist das Plugin mit verschiedenen Inplaytrackern/Szenentrackern kompatibel: mit dem <a href="https://github.com/its-sparks-fly/Inplaytracker-2.0">Inplaytracker 2.0 von sparks fly</a>, dem Nachfolger <a href="https://github.com/ItsSparksFly/mybb-inplaytracker">Inplaytracker 3.0 von sparks fly</a>, dem <a href="https://github.com/little-evil-genius/Inplayszenen-Manager">Inplayszenen-Manager von mir (little.evil.genius)</a>, dem <a href="https://storming-gates.de/showthread.php?tid=1023729&pid=537783#pid537783">Szenentracker von Risuena</a>, dem <a href="https://github.com/Ales12/inplaytracker">Inplaytracker 1.0 von Ales</a> und dem Nachfolger <a href="https://github.com/Ales12/inplaytracker-2.0">Inplaytracker 2.0 von Ales</a>.<br>
 Genauso kann auch das Listen-Menü angezeigt werden, wenn man das <a href="https://github.com/ItsSparksFly/mybb-lists">Automatische Listen-Plugin von sparks fly</a> verwendet. Beides muss nur vorher eingestellt werden.
 
 # Neue Template-Gruppe innerhalb der Design-Templates
@@ -85,7 +85,7 @@ Alle Templates wurden größtenteils ohne Tabellen-Struktur gecodet. Das Layout 
 - forumbit_depth1_cat oder forumbit_depth2_cat: {$forum['inplayquotes_index']}
 
 # Neues CSS - inplayquotes.css
-Es wird automatisch in jedes bestehende und neue Design hinzugefügt. Man sollte es einfach einmal abspeichern - auch im Default. Sonst kann es passieren, dass es bei einem Update von MyBB entfernt wird.
+Es wird automatisch in jedes bestehende und neue Design hinzugefügt. Man sollte es einfach einmal abspeichern - auch im Default. Nach einem MyBB Upgrade fehlt der Stylesheets im Masterstyle? Im ACP Modul "RPG Erweiterungen" befindet sich der Menüpunkt "Stylesheets überprüfen" und kann von hinterlegten Plugins den Stylesheet wieder hinzufügen.
 <blockquote>
   
         .inplayquotes_popup {
@@ -574,9 +574,18 @@ $scene_fields = ["location", "date", "shortdesc", "openscene", "partners"];<br>
 Mögliche Felder (das XX durch den Namen vom Feld ersetzen:<br>
 $scene_fields = ["scenetracker_date", "scenetracker_place", "scenetracker_user", "scenetracker_trigger"];<br>
 <br>
-<b>Inplaytracker von Ales</b>
+<b>Inplaytracker 1.0 von Ales</b><br>
 Mögliche Felder (das XX durch den Namen vom Feld ersetzen:<br>
 $scene_fields = ["spieler", "date", "ort", "ip_time"];<br>
+<br>
+<b>Inplaytracker 2.0 von Ales</b><br>
+Mögliche Felder (das XX durch den Namen vom Feld ersetzen:<br>
+$scene_fields = ["charas", "date", "time", "place"];<br>
+<br>
+<b>Inplaytracker von little.evil.genius</b><br>
+Mögliche Felder (das XX durch den Namen vom Feld ersetzen:<br>
+$scene_fields = ["partners", "partners_username", "date", "trigger_warning", "scenetype", "postorder"];<br>
+Zusätzlich können die individuellen Felder mit dem Identifikator für die Felder jeweils ausgegeben werden.<br>
 <br>
 <br>
 <b>Charakterinformationen</b><br>
