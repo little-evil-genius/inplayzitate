@@ -993,7 +993,9 @@ function inplayquotes_misc() {
 		if($liststype_setting != 2){
             // Jules Plugin
             if ($liststype_setting == 1) {
+                $lang->load("lists");
                 $query_lists = $db->simple_select("lists", "*");
+                $menu_bit = "";
                 while($list = $db->fetch_array($query_lists)) {
                     eval("\$menu_bit .= \"".$templates->get("lists_menu_bit")."\";");
                 }
