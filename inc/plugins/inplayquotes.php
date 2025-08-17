@@ -38,7 +38,7 @@ function inplayquotes_info(){
 		"website"	=> "https://github.com/little-evil-genius/inplayzitate",
 		"author"	=> "little.evil.genius",
 		"authorsite"	=> "https://storming-gates.de/member.php?action=profile&uid=1712",
-		"version"	=> "1.1.1",
+		"version"	=> "1.1.2",
 		"compatibility" => "18*"
 	);
 }
@@ -1368,7 +1368,11 @@ function inplayquotes_misc() {
 
             // Szenenlink
             $thread = get_thread($tid);
-            $scene_link = "<a href=\"showthread.php?tid=".$tid."&amp;pid=".$pid."#pid".$pid."\">".$thread['subject']."</a>";
+            if (!empty($thread)) {
+                $scene_link = "<a href=\"showthread.php?tid=".$tid."&amp;pid=".$pid."#pid".$pid."\">".$thread['subject']."</a>";
+            } else {
+                $scene_link = $lang->inplayquotes_delete_scene;
+            }
 
             // Postdatum
             $postdate = my_date('relative', $date);
@@ -1970,7 +1974,11 @@ function inplayquotes_index() {
 
         // Szenenlink
         $thread = get_thread($tid);
-        $scene_link = "<a href=\"showthread.php?tid=".$tid."&amp;pid=".$pid."#pid".$pid."\">".$thread['subject']."</a>";
+        if (!empty($thread)) {
+                $scene_link = "<a href=\"showthread.php?tid=".$tid."&amp;pid=".$pid."#pid".$pid."\">".$thread['subject']."</a>";
+            } else {
+                $scene_link = $lang->inplayquotes_delete_scene;
+            }
 
         // Postdatum
         $postdate = my_date('relative', $date);
@@ -2285,7 +2293,11 @@ function inplayquotes_profile() {
 
         // Szenenlink
         $thread = get_thread($tid);
-        $scene_link = "<a href=\"showthread.php?tid=".$tid."&amp;pid=".$pid."#pid".$pid."\">".$thread['subject']."</a>";
+        if (!empty($thread)) {
+                $scene_link = "<a href=\"showthread.php?tid=".$tid."&amp;pid=".$pid."#pid".$pid."\">".$thread['subject']."</a>";
+            } else {
+                $scene_link = $lang->inplayquotes_delete_scene;
+            }
 
         // Postdatum
         $postdate = my_date('relative', $date);
@@ -3122,7 +3134,11 @@ function inplayquotes_forumbits(&$forum) {
 
         // Szenenlink
         $thread = get_thread($tid);
-        $scene_link = "<a href=\"showthread.php?tid=".$tid."&amp;pid=".$pid."#pid".$pid."\">".$thread['subject']."</a>";
+        if (!empty($thread)) {
+                $scene_link = "<a href=\"showthread.php?tid=".$tid."&amp;pid=".$pid."#pid".$pid."\">".$thread['subject']."</a>";
+            } else {
+                $scene_link = $lang->inplayquotes_delete_scene;
+            }
 
         // Postdatum
         $postdate = my_date('relative', $date);
