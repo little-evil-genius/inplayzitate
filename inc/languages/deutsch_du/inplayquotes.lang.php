@@ -15,6 +15,7 @@ $l['inplayquotes_overview'] = "Alle Inplayzitate";
 $l['inplayquotes_overview_error_guest'] = "Du hast keine Berechtigungen die Inplayzitat einzusehen.";
 $l['inplayquotes_filter'] = "Filtern nach";
 $l['inplayquotes_filter_button'] = "Zitate durchsuchen";
+$l['inplayquotes_delete_scene'] = "[gelöschte Szene]";
 
 $l['inplayquotes_filter_headline_player'] = "nach Spieler:in";
 $l['inplayquotes_filter_select_player'] = "Spieler:in auswählen";
@@ -37,7 +38,6 @@ $l['inplayquote_redirect_allreactions_delete'] = "Du hast erfolgreich alle Reakt
 $l['inplayquotes_quote_delete'] = "Zitat löschen";
 $l['inplayquote_redirect_quote_delete'] = "Du hast das Inplayzitat erfolgreich gelöscht! Du  wirst nun zurück zur Übersicht der Inplayzitate geleitet";
 $l['inplayquote_redirect_reactions_delete'] = "Du hast die Reaktion von diesem Inplayzitat erfolgreich gelöscht! Du wirst nun zurück zur Übersicht der Inplayzitate geleitet";
-
 
 $l['inplayquotes_reactions_add'] = "Reaktion hinzufügen";
 $l['inplayquotes_reactions_add_desc'] = "Smiley anklicken, um diesen als Reaktion hinzufügen";
